@@ -1,6 +1,6 @@
 #pragma once
 #include "gfx/color.h"
-// Font bitmap tự nhiên: giờ cao 19 px, lịch cao 8 px, không kéo giãn.
+// Font bitmap tự nhiên: giờ Spleen pixel cao 20 px, lịch cao 8 px, không kéo giãn.
 void clock_face_time(int hour, int minute, bool colon, Rgb color);
 // 60 pixel giữa panel, thêm một pixel mỗi giây; chỉ dùng hàng y=21.
 void clock_face_seconds(int second);

@@ -1,3 +1,8 @@
+# 2.3.1 — Font giờ pixel có sẵn
+
+- Thay toàn bộ số giờ tự thiết kế bằng bitmap Spleen 8x16 phóng 2×, nét đậm, cao 20 px.
+- Giữ thanh rainbow, bảng màu giờ/ngày, lịch và trạng thái khởi động.
+
 # 2.3.0 — Rounded, rainbow và bảng màu tùy chọn
 
 - Thiết kế lại 10 chữ số bằng đường cong, nét tròn 3 px, giữ ô 14×19.

@@ -34,10 +34,10 @@ void clock_face_draw(const char *text,int y,int,Rgb color) {
 }
 void clock_face_time(int hour,int minute,bool colon,Rgb color) {
     const int digits[]={hour/10,hour%10,minute/10,minute%10};
-    const int xs[]={0,14,36,50};
-    for(int i=0;i<4;++i) for(int row=0;row<19;++row) for(int col=0;col<14;++col) {
+    const int xs[]={0,15,35,50};
+    for(int i=0;i<4;++i) for(int row=0;row<20;++row) for(int col=0;col<14;++col) {
         if(CLOCK_DIGITS[digits[i]][row]&(1<<(13-col)))
-            panel_set_pixel(xs[i]+col,row+1,color.r,color.g,color.b);
+            panel_set_pixel(xs[i]+col,row,color.r,color.g,color.b);
     }
     if(colon) for(int row=0;row<2;++row) for(int col=0;col<2;++col) {
         panel_set_pixel(30+col,6+row,color.r,color.g,color.b);

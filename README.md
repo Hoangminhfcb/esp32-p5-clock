@@ -4,7 +4,7 @@ Nhánh `feature/p5-clock` chuyển ứng dụng sang đồng hồ Việt Nam (UT
 
 ![Xem trước bitmap giờ và lịch](docs/clock-preview.png)
 
-- Chỉ hai hàng: giờ/phút 24 giờ cao **19 px**, lịch bitmap cao **8 px** (nét gốc, không kéo giãn).
+- Chỉ hai hàng: giờ/phút 24 giờ cao **20 px**, lịch bitmap cao **8 px** (nét gốc, không kéo giãn).
 - Vạch giây cao 1 pixel tại hàng 21 giữa giờ và lịch, 60 LED (chừa 2 pixel mỗi mép): thêm một LED mỗi giây, đầy ở giây 59 rồi bắt đầu lại ở giây 00. Dải rainbow chạy màu theo giây.
 - Dấu hai chấm bật/tắt theo từng giây; màu giờ thay đổi mỗi giờ, màu lịch thay đổi mỗi ngày tại UTC+7. Dấu `/` luôn màu trắng để dễ phân biệt với chữ lịch.
 - Hàng lịch luân phiên mỗi **6 giây**: `T6 27/11/26` và `19/10 AL` (thêm `N` nếu tháng nhuận).
@@ -61,9 +61,9 @@ Mã ứng dụng bảng chữ/ghép màn hình cũ vẫn được giữ làm tha
 
 ## Font đồng hồ
 
-Số giờ rounded được thiết kế bằng đường cong, nét 3 px và đầu nét tròn trong ô 14×19; lịch dùng Spleen 6x12, phần nét cao 8 px. Không dùng số bảy đoạn hay kéo bitmap 3x5. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
+Số giờ dùng font bitmap Spleen 8x16 có sẵn (Frederic Cambus, BSD-2-Clause), phóng nguyên pixel 2× thành phần nét 14×20; lịch dùng Spleen 6x12, phần nét cao 8 px. Không dùng số bảy đoạn hay kéo bitmap 3x5. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
 
-Sinh lại bằng `python tools/gen_clock_font.py` (cần Pillow). Giấy phép: `tools/gen_fonts/font_src/LICENSE-DejaVu.txt`, `tools/gen_fonts/font_src/LICENSE-Spleen.txt`.
+Sinh lại bằng `python tools/gen_clock_font.py` (chỉ cần Python, không cần thư viện ngoài). Giấy phép: `tools/gen_fonts/font_src/LICENSE-DejaVu.txt`, `tools/gen_fonts/font_src/LICENSE-Spleen.txt`.
 
 API cấu hình: `GET /scan?refresh=1` yêu cầu quét; `GET /scan` trả `scanning` và danh sách `{ssid,rssi,secured}`. Quét thực hiện trong tác vụ mạng; màn hình vẫn cập nhật độc lập. Chặn quét khi đang thử kết nối để tránh xung đột driver.
 
