@@ -34,17 +34,17 @@ void clock_face_draw(const char *text,int y,int,Rgb color) {
 }
 void clock_face_time(int hour,int minute,uint32_t second_ms,Rgb color) {
     const int digits[]={hour/10,hour%10,minute/10,minute%10};
-    const int xs[]={3,17,34,48};
-    // Bitmap DSEG7 Classic Bold giữ nguyên dáng đoạn và vị trí số 1 của font gốc.
-    for(int i=0;i<4;++i) for(int row=0;row<19;++row) for(int col=0;col<13;++col) {
-        if(CLOCK_DIGITS[digits[i]][row]&(1<<(12-col)))
-            panel_set_pixel(xs[i]+col,row+2,color.r,color.g,color.b);
+    const int xs[]={0,15,36,51};
+    // Bộ số lấy từ mẫu 8: sát trên/trái, toàn hàng dùng cột 0..62.
+    for(int i=0;i<4;++i) for(int row=0;row<21;++row) for(int col=0;col<12;++col) {
+        if(CLOCK_DIGITS[digits[i]][row]&(1<<(11-col)))
+            panel_set_pixel(xs[i]+col,row,color.r,color.g,color.b);
     }
     // Hai chấm đi vào nhau, chạm ở nửa giây rồi nảy ra; nội suy để không giật pixel.
     const int ms=second_ms%1000;
     const int progress=(ms<=500?ms:1000-ms)*256/500;
     const int eased=progress*progress*(768-2*progress)/65536;
-    const int positions[]={7*256+3*eased,15*256-3*eased};
+    const int positions[]={6*256+3*eased,14*256-3*eased};
     for(int position:positions) {
         const int top=position/256,fraction=position%256;
         const int weights[]={256-fraction,256,fraction};
@@ -58,38 +58,26 @@ void clock_face_date(const char *text,int offset_y,Rgb color) {
     for(;*text;++text) {
         // Trắng giữ dấu / nổi bật với mọi màu lịch bão hòa theo giờ.
         const Rgb ink=*text=='/'?Rgb{255,255,255}:color;
-        small_glyph(*text,x,23+offset_y,ink,23,PANEL_H-1);
+        small_glyph(*text,x,24+offset_y,ink,24,PANEL_H);
         x+=advance(*text);
     }
 }
 
 void clock_face_seconds(uint32_t minute_ms) {
     if(minute_ms>=60000) return;
-    constexpr int WIDTH=PANEL_W-1,HEIGHT=PANEL_H-1;
-    constexpr int PERIMETER=2*(WIDTH+HEIGHT),TAIL=24;
-    const uint32_t head=minute_ms*PERIMETER*256/60000;
-    const int index=head/256,fraction=head%256;
-    auto sample=[&](int distance) -> Rgb {
-        if(distance>=TAIL) return {0,0,0};
-        const int gain=(TAIL-distance)*(TAIL-distance)*255/(TAIL*TAIL);
-        const Rgb c=hue_to_rgb(static_cast<uint8_t>(distance*256/TAIL+minute_ms*256/60000));
-        return {static_cast<uint8_t>(c.r*gain/255),static_cast<uint8_t>(c.g*gain/255),static_cast<uint8_t>(c.b*gain/255)};
-    };
-    for(int i=0;i<PERIMETER;++i) {
-        const int distance=(index-i+PERIMETER)%PERIMETER;
-        const Rgb a=sample(distance),b=sample((distance+1)%PERIMETER);
-        const Rgb color={static_cast<uint8_t>((a.r*(256-fraction)+b.r*fraction)/256),
-                         static_cast<uint8_t>((a.g*(256-fraction)+b.g*fraction)/256),
-                         static_cast<uint8_t>((a.b*(256-fraction)+b.b*fraction)/256)};
-        if(!(color.r||color.g||color.b)) continue;
-        // Bắt đầu giữa cạnh trên; chạy trên toàn bộ mép 64x32.
-        const int position=(i+PANEL_W/2)%PERIMETER;
-        int x,y;
-        if(position<WIDTH) {x=position;y=0;}
-        else if(position<WIDTH+HEIGHT) {x=WIDTH;y=position-WIDTH;}
-        else if(position<2*WIDTH+HEIGHT) {x=WIDTH-(position-WIDTH-HEIGHT);y=HEIGHT;}
-        else {x=0;y=HEIGHT-(position-2*WIDTH-HEIGHT);}
-        panel_set_pixel(x,y,color.r,color.g,color.b);
+    // 30 giây đi tới, 30 giây quay lại; vị trí Q8 giúp nội suy từng pixel.
+    constexpr int RADIUS=8;
+    const uint32_t phase=minute_ms<=30000?minute_ms:60000-minute_ms;
+    const int head=phase*(PANEL_W-1)*256/30000;
+    for(int x=0;x<PANEL_W;++x) {
+        int distance=x*256-head;
+        if(distance<0) distance=-distance;
+        if(distance>=RADIUS*256) continue;
+        const int linear=(RADIUS*256-distance)*255/(RADIUS*256);
+        const int gain=linear*linear/255;
+        if(!gain) continue;
+        const Rgb c=hue_to_rgb(static_cast<uint8_t>(x*256/(2*RADIUS)+minute_ms*256/60000));
+        panel_set_pixel(x,22,c.r*gain/255,c.g*gain/255,c.b*gain/255);
     }
 }
 

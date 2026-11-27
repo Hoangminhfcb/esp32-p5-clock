@@ -1,3 +1,10 @@
+# 2.7.0 — Font theo mẫu pixel và thanh giây hai chiều
+
+- Lấy đúng nét số 8 từ ảnh người dùng để sinh bộ số 12×21.
+- Giờ đặt sát trên/trái, ô hiển thị dùng cột 0–62; lịch sát đáy ở hàng 24–31.
+- Bỏ viền giây, chuyển thành một hàng rainbow y=22: đi trái → phải 30s và trở lại 30s.
+- Giữ hai chấm nảy mỗi giây và các bảng màu giờ/ngày.
+
 # 2.6.0 — Nét đậm, lịch sát mép và hai chấm nảy
 
 - Tăng nét số DSEG7 thêm một pixel ngang.

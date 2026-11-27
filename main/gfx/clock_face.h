@@ -1,8 +1,8 @@
 #pragma once
 #include "gfx/color.h"
-// Giờ LED 7 đoạn cao 19 px; lịch bitmap cao 8 px.
+// Giờ 12x21 lấy từ ảnh mẫu; lịch bitmap cao 8 px sát đáy.
 void clock_face_time(int hour, int minute, uint32_t second_ms, Rgb color);
-// Đoạn rainbow có đuôi mờ quanh toàn panel; pha 0..59999 ms, 1 vòng/phút.
+// Một hàng rainbow tại y=22: 30s trái->phải, 30s phải->trái, nội suy mượt.
 void clock_face_seconds(uint32_t minute_ms);
 void clock_face_status(bool connecting);
 int clock_face_date_width(const char *text);
