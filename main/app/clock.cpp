@@ -155,6 +155,7 @@ static void display(void *) {
             const Rgb time_color=hue_to_rgb(static_cast<uint8_t>(t.tm_hour*256/24));
             const Rgb date_color=hue_to_rgb(static_cast<uint8_t>(t.tm_hour*256/24+40));
             clock_face_time(t.tm_hour,t.tm_min,t.tm_sec%2==0,time_color);
+            clock_face_seconds(t.tm_sec,time_color);
             char line[32];
             if(phase%2==0) {
                 static const char *WEEKDAYS[]={"CN","T2","T3","T4","T5","T6","T7"};

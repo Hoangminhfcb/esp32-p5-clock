@@ -5,6 +5,7 @@ Nhánh `feature/p5-clock` chuyển ứng dụng sang đồng hồ Việt Nam (UT
 ![Xem trước bitmap giờ và lịch](docs/clock-preview.png)
 
 - Chỉ hai hàng: giờ/phút 24 giờ cao **19 px**, lịch bitmap cao **8 px** (nét gốc, không kéo giãn).
+- Vạch giây cao 1 pixel tại hàng 21 giữa giờ và lịch, 60 LED (chừa 2 pixel mỗi mép): thêm một LED mỗi giây, đầy ở giây 59 rồi bắt đầu lại ở giây 00. Cùng màu giờ.
 - Dấu hai chấm bật/tắt theo từng giây; màu giờ và lịch thay đổi sau mỗi giờ trong ngày. Dấu `/` luôn màu trắng để dễ phân biệt với chữ lịch.
 - Hàng lịch luân phiên mỗi **6 giây**: `T6 27/11/26` và `19/10 AL` (thêm `N` nếu tháng nhuận).
 - Khi đổi lịch, dòng mới trượt lên trong **400 ms**; giờ luôn đứng yên. Có thể chỉnh trong `main/config/app_config.h`.

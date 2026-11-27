@@ -1,3 +1,8 @@
+# 2.2.3 — Vạch giây giữa giờ và lịch
+
+- Thêm vạch 60 LED cao 1 pixel tại y=21: thêm một LED mỗi giây, bắt đầu lại khi sang phút.
+- Giữ nguyên font, vị trí giờ/lịch và màu hiện tại.
+
 # 2.2.2 — Giờ Bold và dấu / khác màu
 
 - Dùng font DejaVu Sans Condensed Bold thật, cao 19 px.

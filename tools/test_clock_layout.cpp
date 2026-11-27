@@ -22,6 +22,17 @@ int main() {
         assert(!pixels[6][30]&&!pixels[13][30]);
         for(int y=20;y<32;++y)for(int x=0;x<64;++x)assert(!pixels[y][x]);
     }
+    // Mỗi giây thêm đúng một LED, không chạm hàng giờ hoặc hàng lịch.
+    for(int second=0;second<60;++second) {
+        memset(pixels,0,sizeof(pixels));
+        clock_face_seconds(second,{80,180,255});
+        int lit=0;
+        for(int y=0;y<32;++y) for(int x=0;x<64;++x) if(pixels[y][x]) {
+            assert(y==21&&x>=2&&x<62);
+            ++lit;
+        }
+        assert(lit==second+1);
+    }
     clip_top=22;
     char text[32];
     for(const char *wd:{"CN","T2","T3","T4","T5","T6","T7"})

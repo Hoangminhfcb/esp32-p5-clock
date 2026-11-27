@@ -54,3 +54,11 @@ void clock_face_date(const char *text,int offset_y,Rgb color) {
         x+=advance(*text);
     }
 }
+
+void clock_face_seconds(int second,Rgb color) {
+    if(second<0||second>59) return;
+    const int width=PANEL_W<60?PANEL_W:60;
+    const int left=(PANEL_W-width)/2;
+    const int lit=(second+1)*width/60;
+    for(int x=0;x<lit;++x) panel_set_pixel(left+x,21,color.r,color.g,color.b);
+}
