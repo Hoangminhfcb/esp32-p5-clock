@@ -33,30 +33,16 @@ void clock_face_draw(const char *text,int y,int,Rgb color) {
     for(;*text;++text) {small_glyph(*text,x,y,color,0);x+=advance(*text);}
 }
 void clock_face_time(int hour,int minute,bool colon,Rgb color) {
-    static const uint8_t MASKS[]={0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f};
     const int digits[]={hour/10,hour%10,minute/10,minute%10};
     const int xs[]={4,18,35,49};
-    // Bảy đoạn chuẩn, ô 12x17, nét 2 px với đầu đoạn vát.
-    for(int i=0;i<4;++i) {
-        const uint8_t mask=MASKS[digits[i]];
-        const int horizontal_bits[]={0,6,3}, ys[]={2,9,17};
-        for(int segment=0;segment<3;++segment) if(mask&(1<<horizontal_bits[segment])) {
-            for(int dy=0;dy<2;++dy) for(int dx=0;dx<8;++dx) {
-                if((dx==0&&dy==0)||(dx==7&&dy==1)) continue;
-                panel_set_pixel(xs[i]+2+dx,ys[segment]+dy,color.r,color.g,color.b);
-            }
-        }
-        const int vertical_bits[]={5,1,4,2}, vx[]={0,10,0,10}, vy[]={4,4,11,11};
-        for(int segment=0;segment<4;++segment) if(mask&(1<<vertical_bits[segment])) {
-            for(int dy=0;dy<5;++dy) for(int dx=0;dx<2;++dx) {
-                if((dy==0&&dx==0)||(dy==4&&dx==1)) continue;
-                panel_set_pixel(xs[i]+vx[segment]+dx,vy[segment]+dy,color.r,color.g,color.b);
-            }
-        }
+    // Bitmap DSEG7 Classic Bold giữ nguyên dáng đoạn và vị trí số 1 của font gốc.
+    for(int i=0;i<4;++i) for(int row=0;row<19;++row) for(int col=0;col<12;++col) {
+        if(CLOCK_DIGITS[digits[i]][row]&(1<<(11-col)))
+            panel_set_pixel(xs[i]+col,row+2,color.r,color.g,color.b);
     }
     if(colon) for(int row=0;row<2;++row) for(int col=0;col<2;++col) {
         panel_set_pixel(31+col,7+row,color.r,color.g,color.b);
-        panel_set_pixel(31+col,13+row,color.r,color.g,color.b);
+        panel_set_pixel(31+col,15+row,color.r,color.g,color.b);
     }
 }
 int clock_face_date_width(const char *text) {return clock_face_width(text,1);}

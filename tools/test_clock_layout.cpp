@@ -21,11 +21,11 @@ int main() {
         clip_top=0;
         memset(pixels,0,sizeof(pixels));
         clock_face_time(h,m,true,{255,255,255});
-        assert(pixels[7][31]&&pixels[13][31]);
+        assert(pixels[7][31]&&pixels[15][31]);
         memset(pixels,0,sizeof(pixels));
         clock_face_time(h,m,false,{255,255,255});
-        assert(!pixels[7][31]&&!pixels[13][31]);
-        for(int y=0;y<32;++y)for(int x=0;x<64;++x)if(pixels[y][x])assert(x>0&&x<63&&y>0&&y<20);
+        assert(!pixels[7][31]&&!pixels[15][31]);
+        for(int y=0;y<32;++y)for(int x=0;x<64;++x)if(pixels[y][x])assert(x>0&&x<63&&y>0&&y<21);
     }
     // Đuôi rainbow chạy liên tục quanh mép; không tích lũy sáng cả viền.
     std::set<int> visited;
@@ -56,7 +56,7 @@ int main() {
         memset(pixels,0,sizeof(pixels));
         clock_face_status(connecting);
         int count=0;
-        for(int y=0;y<32;++y)for(int x=0;x<64;++x) if(pixels[y][x]) {assert(y>=12&&y<20);++count;}
+        for(int y=0;y<32;++y)for(int x=0;x<64;++x) if(pixels[y][x]) {assert(y>=12&&y<21);++count;}
         assert(count>40);
     }
     const uint32_t palette[]={0xFF0000,0x00FF00,0x0000FF,0xFFFF00};

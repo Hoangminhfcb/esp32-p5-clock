@@ -4,7 +4,7 @@ Nhánh `feature/p5-clock` chuyển ứng dụng sang đồng hồ Việt Nam (UT
 
 ![Xem trước bitmap giờ và lịch](docs/clock-preview.png)
 
-- Chỉ hai hàng: giờ/phút 24 giờ kiểu **LED 7 đoạn**, cao **17 px**, lịch bitmap cao **8 px** (nét gốc, không kéo giãn).
+- Chỉ hai hàng: giờ/phút 24 giờ kiểu **LED 7 đoạn**, cao **19 px**, lịch bitmap cao **8 px** (nét gốc, không kéo giãn).
 - Một đoạn rainbow có đuôi mờ chạy liên tục quanh **toàn bộ mép màn hình 64×32**: bắt đầu giữa cạnh trên, chiều kim đồng hồ, một vòng/phút. Nội suy độ sáng ở 25 fps để di chuyển mượt, không tích lũy sáng cả viền.
 - Dấu hai chấm bật/tắt theo từng giây; màu giờ thay đổi mỗi giờ, màu lịch thay đổi mỗi ngày tại UTC+7. Dấu `/` luôn màu trắng để dễ phân biệt với chữ lịch.
 - Hàng lịch luân phiên mỗi **6 giây**: `T6 27/11/26` và `19/10 AL` (thêm `N` nếu tháng nhuận).
@@ -61,9 +61,9 @@ Mã ứng dụng bảng chữ/ghép màn hình cũ vẫn được giữ làm tha
 
 ## Font đồng hồ
 
-Giờ dùng bảy đoạn LED chuẩn, ô số 12×17, nét 2 px với đầu đoạn vát. Lịch dùng Spleen 6x12, phần nét cao 8 px và nằm ở hàng 22–29 để chừa mép dưới cho viền. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
+Giờ dùng font có sẵn [DSEG7 Classic Bold](https://www.keshikan.net/fonts-e.html), bitmap 12×19, giữ nguyên dáng đoạn vát của font gốc gần với ảnh tham khảo. Lịch dùng Spleen 6x12, phần nét cao 8 px và nằm ở hàng 22–29 để chừa mép dưới cho viền. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
 
-Sinh lại bằng `python tools/gen_clock_font.py` (chỉ cần thư viện chuẩn Python). Giấy phép chữ lịch: `tools/gen_fonts/font_src/LICENSE-Spleen.txt`.
+Sinh lại bằng `python tools/gen_clock_font.py` (cần Pillow). Giấy phép giờ: `tools/gen_fonts/font_src/LICENSE-DSEG.txt`; chữ lịch: `tools/gen_fonts/font_src/LICENSE-Spleen.txt`.
 
 API cấu hình: `GET /scan?refresh=1` yêu cầu quét; `GET /scan` trả `scanning` và danh sách `{ssid,rssi,secured}`. Quét thực hiện trong tác vụ mạng; màn hình vẫn cập nhật độc lập. Chặn quét khi đang thử kết nối để tránh xung đột driver.
 

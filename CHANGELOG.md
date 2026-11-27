@@ -1,3 +1,8 @@
+# 2.5.1 — Kiểu số LED theo ảnh tham khảo
+
+- Dùng font DSEG7 Classic Bold chính thức, cao 19 px, giữ các đoạn vát và khoảng hở của font gốc.
+- Giữ viền rainbow chuyển động mượt quanh toàn màn hình và các cài đặt khác.
+
 # 2.5.0 — Giờ 7 đoạn, viền rainbow chuyển động mượt
 
 - Giờ dùng bảy đoạn LED chuẩn, cao 17 px.
