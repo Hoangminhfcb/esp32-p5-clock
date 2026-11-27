@@ -1,3 +1,8 @@
+# 2.2.2 — Giờ Bold và dấu / khác màu
+
+- Dùng font DejaVu Sans Condensed Bold thật, cao 19 px.
+- Dấu / trong lịch luôn màu trắng; chữ lịch và giờ vẫn đổi màu mỗi giờ.
+
 # 2.2.1 — Nét giờ đậm hơn và lịch dùng dấu /
 
 - Tăng nét số giờ thêm 1 px ngang, giữ bố cục.

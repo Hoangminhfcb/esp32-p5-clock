@@ -35,8 +35,8 @@ void clock_face_draw(const char *text,int y,int,Rgb color) {
 void clock_face_time(int hour,int minute,bool colon,Rgb color) {
     const int digits[]={hour/10,hour%10,minute/10,minute%10};
     const int xs[]={0,14,36,50};
-    for(int i=0;i<4;++i) for(int row=0;row<19;++row) for(int col=0;col<13;++col) {
-        if(CLOCK_DIGITS[digits[i]][row]&(1<<(12-col)))
+    for(int i=0;i<4;++i) for(int row=0;row<19;++row) for(int col=0;col<14;++col) {
+        if(CLOCK_DIGITS[digits[i]][row]&(1<<(13-col)))
             panel_set_pixel(xs[i]+col,row+1,color.r,color.g,color.b);
     }
     if(colon) for(int row=0;row<2;++row) for(int col=0;col<2;++col) {
@@ -47,5 +47,10 @@ void clock_face_time(int hour,int minute,bool colon,Rgb color) {
 int clock_face_date_width(const char *text) {return clock_face_width(text,1);}
 void clock_face_date(const char *text,int offset_y,Rgb color) {
     int x=(PANEL_W-clock_face_date_width(text))/2;
-    for(;*text;++text) {small_glyph(*text,x,23+offset_y,color,22);x+=advance(*text);}
+    for(;*text;++text) {
+        // Trắng giữ dấu / nổi bật với mọi màu lịch bão hòa theo giờ.
+        const Rgb ink=*text=='/'?Rgb{255,255,255}:color;
+        small_glyph(*text,x,23+offset_y,ink,22);
+        x+=advance(*text);
+    }
 }

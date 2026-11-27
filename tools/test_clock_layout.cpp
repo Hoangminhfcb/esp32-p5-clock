@@ -5,7 +5,9 @@
 #include <initializer_list>
 static bool pixels[32][64];
 static int clip_top=0;
-void panel_set_pixel(int x,int y,uint8_t,uint8_t,uint8_t) {
+static int white_pixels=0, colored_pixels=0;
+void panel_set_pixel(int x,int y,uint8_t r,uint8_t g,uint8_t b) {
+    if(r==255&&g==255&&b==255) ++white_pixels; else ++colored_pixels;
     assert(x>=0&&x<64&&y>=clip_top&&y<32);
     pixels[y][x]=true;
 }
@@ -32,5 +34,11 @@ int main() {
         assert(clock_face_date_width(lunar)<=64);
         for(int offset=-10;offset<=10;++offset) clock_face_date(lunar,offset,{255,255,255});
     }
+    white_pixels=colored_pixels=0;
+    clock_face_date("T6 27/11/26",0,{80,180,255});
+    assert(white_pixels==16&&colored_pixels>0);
+    white_pixels=colored_pixels=0;
+    clock_face_date("19/10 AL",0,{255,80,120});
+    assert(white_pixels==8&&colored_pixels>0);
     puts("Clock tests passed: all hours, colon on/off, solar/lunar layouts and transition clipping");
 }
