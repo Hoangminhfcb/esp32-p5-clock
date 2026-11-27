@@ -1,3 +1,10 @@
+# 2.5.0 — Giờ 7 đoạn, viền rainbow chuyển động mượt
+
+- Giờ dùng bảy đoạn LED chuẩn, cao 17 px.
+- Đoạn rainbow có đuôi mờ chạy toàn bộ mép 64×32, một vòng/phút từ giữa cạnh trên.
+- Nội suy vị trí/độ sáng theo mili giây, cập nhật 25 fps; không sáng tích lũy.
+- Dịch lịch lên một pixel và cắt vùng hiệu ứng để không chạm viền.
+
 # 2.4.0 — Silkscreen Bold và viền giây
 
 - Đổi sang font pixel Silkscreen Bold có sẵn, thu giờ xuống 13 px.

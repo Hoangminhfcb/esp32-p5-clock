@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Phiên bản firmware (hiện trên web). Tăng khi phát hành, kèm git tag vX.Y.Z
-set(PROJECT_VER "2.4.0")
+set(PROJECT_VER "2.5.0")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(esp32-p5-hub75)

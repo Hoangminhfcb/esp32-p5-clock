@@ -4,6 +4,7 @@
 #include <cstring>
 #include <initializer_list>
 #include <set>
+#include <cstdlib>
 #include "app/clock_palette.h"
 static bool pixels[32][64];
 static uint32_t colors[32][64];
@@ -24,28 +25,33 @@ int main() {
         memset(pixels,0,sizeof(pixels));
         clock_face_time(h,m,false,{255,255,255});
         assert(!pixels[7][31]&&!pixels[13][31]);
-        for(int y=0;y<32;++y)for(int x=0;x<64;++x)if(pixels[y][x])assert(x>0&&x<63&&y>1&&y<20);
+        for(int y=0;y<32;++y)for(int x=0;x<64;++x)if(pixels[y][x])assert(x>0&&x<63&&y>0&&y<20);
     }
-    // Viền bắt đầu giữa cạnh trên, đi hết 164 điểm, không vào vùng chữ/lịch.
-    std::set<int> previous;
-    for(int second=0;second<60;++second) {
-        memset(pixels,0,sizeof(pixels));
-        clock_face_seconds(second);
-        std::set<int> lit;
+    // Đuôi rainbow chạy liên tục quanh mép; không tích lũy sáng cả viền.
+    std::set<int> visited;
+    uint32_t initial[32][64]={};
+    for(int ms=0;ms<60000;ms+=40) {
+        memset(pixels,0,sizeof(pixels));memset(colors,0,sizeof(colors));
+        clock_face_seconds(ms);
+        int count=0;
         for(int y=0;y<32;++y) for(int x=0;x<64;++x) if(pixels[y][x]) {
-            assert(((y==1||y==20)&&x>=0&&x<64)||((x==0||x==63)&&y>=1&&y<=20));
-            lit.insert(y*64+x);
+            assert(x==0||x==63||y==0||y==31);
+            visited.insert(y*64+x);++count;
         }
-        assert(lit.size()==static_cast<size_t>((second+1)*164/60));
-        assert(pixels[1][32]);
-        if(second<59) assert(!pixels[1][31]);
-        for(int point:previous) assert(lit.count(point));
-        previous=lit;
+        assert(count>0&&count<=25);
+        if(ms==0) {assert(pixels[0][32]);memcpy(initial,colors,sizeof(initial));}
     }
-    assert(previous.size()==164);
-    std::set<uint32_t> rainbow;
-    for(int point:previous) rainbow.insert(colors[point/64][point%64]);
-    assert(rainbow.size()>60);
+    assert(visited.size()==188);
+    memset(pixels,0,sizeof(pixels));memset(colors,0,sizeof(colors));
+    clock_face_seconds(59999);
+    int wrap_difference=0;
+    for(int y=0;y<32;++y)for(int x=0;x<64;++x)for(int shift:{0,8,16})
+        wrap_difference+=std::abs(int((initial[y][x]>>shift)&255)-int((colors[y][x]>>shift)&255));
+    assert(wrap_difference<500);
+    memset(colors,0,sizeof(colors));clock_face_seconds(0);
+    const uint32_t first_head=colors[0][32];
+    memset(colors,0,sizeof(colors));clock_face_seconds(40);
+    assert(colors[0][32]!=first_head); // Có nội suy trước khi nhảy sang pixel kế tiếp.
     for(bool connecting:{false,true}) {
         memset(pixels,0,sizeof(pixels));
         clock_face_status(connecting);

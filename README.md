@@ -4,8 +4,8 @@ Nhánh `feature/p5-clock` chuyển ứng dụng sang đồng hồ Việt Nam (UT
 
 ![Xem trước bitmap giờ và lịch](docs/clock-preview.png)
 
-- Chỉ hai hàng: giờ/phút 24 giờ cao **13 px**, lịch bitmap cao **8 px** (nét gốc, không kéo giãn).
-- Viền giây rainbow cao 1 pixel quanh vùng giờ: bắt đầu giữa cạnh trên, chạy theo chiều kim đồng hồ, đầy một vòng ở giây 59 rồi bắt đầu lại khi sang phút.
+- Chỉ hai hàng: giờ/phút 24 giờ kiểu **LED 7 đoạn**, cao **17 px**, lịch bitmap cao **8 px** (nét gốc, không kéo giãn).
+- Một đoạn rainbow có đuôi mờ chạy liên tục quanh **toàn bộ mép màn hình 64×32**: bắt đầu giữa cạnh trên, chiều kim đồng hồ, một vòng/phút. Nội suy độ sáng ở 25 fps để di chuyển mượt, không tích lũy sáng cả viền.
 - Dấu hai chấm bật/tắt theo từng giây; màu giờ thay đổi mỗi giờ, màu lịch thay đổi mỗi ngày tại UTC+7. Dấu `/` luôn màu trắng để dễ phân biệt với chữ lịch.
 - Hàng lịch luân phiên mỗi **6 giây**: `T6 27/11/26` và `19/10 AL` (thêm `N` nếu tháng nhuận).
 - Khi đổi lịch, dòng mới trượt lên trong **400 ms**; giờ luôn đứng yên. Có thể chỉnh trong `main/config/app_config.h`.
@@ -61,9 +61,9 @@ Mã ứng dụng bảng chữ/ghép màn hình cũ vẫn được giữ làm tha
 
 ## Font đồng hồ
 
-Số giờ dùng [Silkscreen Bold](https://github.com/googlefonts/silkscreen) của Jason Kottke (SIL OFL 1.1), raster đúng ô pixel 13×13 để chừa khoảng trống cho viền giây; lịch dùng Spleen 6x12, phần nét cao 8 px. Không dùng số bảy đoạn hay kéo bitmap 3x5. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
+Giờ dùng bảy đoạn LED chuẩn, ô số 12×17, nét 2 px với đầu đoạn vát. Lịch dùng Spleen 6x12, phần nét cao 8 px và nằm ở hàng 22–29 để chừa mép dưới cho viền. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
 
-Sinh lại bằng `python tools/gen_clock_font.py` (cần Pillow). Giấy phép: `tools/gen_fonts/font_src/LICENSE-Silkscreen.txt`, `tools/gen_fonts/font_src/LICENSE-Spleen.txt`.
+Sinh lại bằng `python tools/gen_clock_font.py` (chỉ cần thư viện chuẩn Python). Giấy phép chữ lịch: `tools/gen_fonts/font_src/LICENSE-Spleen.txt`.
 
 API cấu hình: `GET /scan?refresh=1` yêu cầu quét; `GET /scan` trả `scanning` và danh sách `{ssid,rssi,secured}`. Quét thực hiện trong tác vụ mạng; màn hình vẫn cập nhật độc lập. Chặn quét khi đang thử kết nối để tránh xung đột driver.
 
@@ -71,6 +71,6 @@ Kiểm tra luồng chọn Wi-Fi: `node tools/test_clock_portal.cjs` (Node.js, kh
 
 ## Phối màu tùy chọn
 
-Giữ BOOT 2 giây, vào Wi-Fi cấu hình và mở **Phối màu đồng hồ và lịch**. Mỗi bộ có 4 màu gốc tùy chọn. Bấm **Lưu bảng màu** để lưu riêng vào NVS (không cần nhập lại mật khẩu Wi-Fi). Giờ nội suy 24 màu cho 24 giờ; lịch nội suy 28 màu và đổi theo ngày dân sự Việt Nam. Bảng màu được giữ sau khi mất điện. Dấu `/` vẫn trắng; vạch giây luôn rainbow.
+Giữ BOOT 2 giây, vào Wi-Fi cấu hình và mở **Phối màu đồng hồ và lịch**. Mỗi bộ có 4 màu gốc tùy chọn. Bấm **Lưu bảng màu** để lưu riêng vào NVS (không cần nhập lại mật khẩu Wi-Fi). Giờ nội suy 24 màu cho 24 giờ; lịch nội suy 28 màu và đổi theo ngày dân sự Việt Nam. Bảng màu được giữ sau khi mất điện. Dấu `/` vẫn trắng; viền giây luôn rainbow.
 
 API bảng màu: `GET /palette` và `POST /palette` với `{"time":["#RRGGBB",...],"date":["#RRGGBB",...]}`; mỗi mảng đúng 4 màu.

@@ -9,6 +9,7 @@
 #include <cstring>
 #include <cstdio>
 #include <ctime>
+#include <sys/time.h>
 #include <cstdlib>
 #include <cctype>
 #include "freertos/FreeRTOS.h"
@@ -181,7 +182,8 @@ static void display(void *) {
         const auto held=button_held_ms();
         if(held>=2000&&!latched) {s_open_setup=true;latched=true;}
         if(!held) latched=false;
-        const time_t now=time(nullptr);
+        timeval wall={};gettimeofday(&wall,nullptr);
+        const time_t now=wall.tv_sec;
         const bool setup=s_setup.load();
         const bool connecting=s_has_credentials.load()||s_connecting.load();
         const bool ready=s_time_ready.load();
@@ -189,7 +191,7 @@ static void display(void *) {
         const int64_t phase=uptime/CLOCK_CALENDAR_MS;
         const int elapsed=uptime%CLOCK_CALENDAR_MS;
         const bool entering=elapsed<CLOCK_CALENDAR_TRANSITION_MS;
-        const int64_t animation=entering?uptime/40:-1;
+        const int64_t animation=(ready||entering)?uptime/40:-1;
         if(now==last_second&&setup==last_setup&&connecting==last_connecting&&ready==last_ready&&animation==last_animation) {
             vTaskDelay(pdMS_TO_TICKS(40));
             continue;
@@ -204,7 +206,6 @@ static void display(void *) {
             // Ngày dân sự tại Việt Nam; không đổi màu lúc chuyển dương/âm lịch.
             const Rgb date_color=clock_palette_mix(palette.date,(now+7*3600)/86400,28);
             clock_face_time(t.tm_hour,t.tm_min,t.tm_sec%2==0,time_color);
-            clock_face_seconds(t.tm_sec);
             char line[32];
             if(phase%2==0) {
                 static const char *WEEKDAYS[]={"CN","T2","T3","T4","T5","T6","T7"};
@@ -217,6 +218,7 @@ static void display(void *) {
             const int remaining=entering?CLOCK_CALENDAR_TRANSITION_MS-elapsed:0;
             const int offset=(10*remaining*remaining)/(CLOCK_CALENDAR_TRANSITION_MS*CLOCK_CALENDAR_TRANSITION_MS);
             clock_face_date(line,offset,date_color);
+            clock_face_seconds(t.tm_sec*1000+wall.tv_usec/1000);
         } else {
             clock_face_status(connecting);
         }
