@@ -6,7 +6,7 @@ Nhánh `feature/p5-clock` chuyển ứng dụng sang đồng hồ Việt Nam (UT
 
 - Chỉ hai hàng: giờ/phút 24 giờ cao **19 px**, lịch bitmap cao **8 px** (nét gốc, không kéo giãn).
 - Dấu hai chấm bật/tắt theo từng giây; màu giờ và lịch thay đổi theo giờ trong ngày.
-- Hàng lịch luân phiên mỗi **6 giây**: `T6 27.11.2026` và `19.10 AL` (thêm `N` nếu tháng nhuận).
+- Hàng lịch luân phiên mỗi **6 giây**: `T6 27/11/26` và `19/10 AL` (thêm `N` nếu tháng nhuận).
 - Khi đổi lịch, dòng mới trượt lên trong **400 ms**; giờ luôn đứng yên. Có thể chỉnh trong `main/config/app_config.h`.
 - Âm lịch tính tại máy theo UTC+7, có tháng nhuận; không phụ thuộc API lịch.
 - Sau đồng bộ NTP thành công, tắt Wi-Fi hoàn toàn 24 giờ. Tác vụ chờ giữa các lần cập nhật; DMA tiếp tục quét LED. Độ sáng mặc định 48/255.
@@ -60,7 +60,7 @@ Mã ứng dụng bảng chữ/ghép màn hình cũ vẫn được giữ làm tha
 
 ## Font đồng hồ
 
-Số giờ được raster hóa trực tiếp từ DejaVu Sans ExtraLight ở cỡ gốc 19 px; lịch dùng Spleen 6x12, phần nét cao 8 px. Không dùng số bảy đoạn hay kéo bitmap 3x5. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
+Số giờ được raster hóa từ DejaVu Sans ExtraLight ở cỡ gốc 19 px, thêm nét ngang 1 px cho dễ đọc; lịch dùng Spleen 6x12, phần nét cao 8 px. Không dùng số bảy đoạn hay kéo bitmap 3x5. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
 
 Sinh lại bằng `python tools/gen_clock_font.py` (cần Pillow). Giấy phép: `tools/gen_fonts/font_src/LICENSE-DejaVu.txt`, `tools/gen_fonts/font_src/LICENSE-Spleen.txt`.
 

@@ -1,3 +1,8 @@
+# 2.2.1 — Nét giờ đậm hơn và lịch dùng dấu /
+
+- Tăng nét số giờ thêm 1 px ngang, giữ bố cục.
+- Lịch dương `T6 27/11/26`, lịch âm `19/10 AL`.
+
 # 2.2.0 — Font bitmap tự nhiên và chọn Wi-Fi
 
 - Font số DejaVu ExtraLight 19 px, lịch Spleen 8 px: không kéo giãn, không dùng bảy đoạn.

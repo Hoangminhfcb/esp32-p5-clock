@@ -158,10 +158,10 @@ static void display(void *) {
             char line[32];
             if(phase%2==0) {
                 static const char *WEEKDAYS[]={"CN","T2","T3","T4","T5","T6","T7"};
-                snprintf(line,sizeof(line),"%s %02d.%02d.%04d",WEEKDAYS[t.tm_wday],t.tm_mday,t.tm_mon+1,t.tm_year+1900);
+                snprintf(line,sizeof(line),"%s %02d/%02d/%02d",WEEKDAYS[t.tm_wday],t.tm_mday,t.tm_mon+1,(t.tm_year+1900)%100);
             } else {
                 const auto l=lunar_date(t.tm_mday,t.tm_mon+1,t.tm_year+1900);
-                snprintf(line,sizeof(line),"%02d.%02d AL%s",l.day,l.month,l.leap?"N":"");
+                snprintf(line,sizeof(line),"%02d/%02d AL%s",l.day,l.month,l.leap?"N":"");
             }
             // Trượt lịch mới lên từ dưới; chỉ cắt trong vùng lịch, giờ luôn đứng yên.
             const int remaining=entering?CLOCK_CALENDAR_TRANSITION_MS-elapsed:0;

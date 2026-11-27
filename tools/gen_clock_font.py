@@ -22,6 +22,8 @@ for char in '0123456789':
     left = (13 - glyph.width) // 2
     for y in range(19):
         rows.append(sum(1 << (12-x-left) for x in range(glyph.width) if glyph.getpixel((x,y))))
+    # Thêm một pixel ngang vào nét, giới hạn trong ô 13 px.
+    rows = [row | (row >> 1) for row in rows]
     large.append(rows)
 # Chữ lịch pixel gốc 5x8, từ BDF Spleen 6x12 (BSD-2-Clause).
 bdf = (SRC / 'spleen-6x12.bdf').read_text()
@@ -32,7 +34,7 @@ for char in chars:
     rows = [int(line,16) >> 3 for line in block.split('BITMAP\n')[1].split('ENDCHAR')[0].splitlines()]
     small.append(rows[1:9])
 out = ['// Sinh bằng tools/gen_clock_font.py. Không sửa tay.',
-       '// Giờ: DejaVu Sans ExtraLight (Bitstream Vera/DejaVu).',
+       '// Giờ: DejaVu Sans ExtraLight, thêm nét 1 px (Bitstream Vera/DejaVu).',
        '// Lịch: Spleen 6x12, Frederic Cambus (BSD-2-Clause).',
        '#pragma once', '#include <stdint.h>',
        'static const uint16_t CLOCK_DIGITS[10][19] = {']

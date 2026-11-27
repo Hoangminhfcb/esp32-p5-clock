@@ -24,11 +24,11 @@ int main() {
     char text[32];
     for(const char *wd:{"CN","T2","T3","T4","T5","T6","T7"})
       for(int d=1;d<=31;++d)for(int m=1;m<=12;++m) {
-        snprintf(text,sizeof(text),"%s %02d.%02d.2026",wd,d,m);
+        snprintf(text,sizeof(text),"%s %02d/%02d/26",wd,d,m);
         assert(clock_face_date_width(text)<=64);
         for(int offset=-10;offset<=10;++offset) clock_face_date(text,offset,{255,255,255});
       }
-    for(const char *lunar:{"19.10 AL","29.12 ALN"}) {
+    for(const char *lunar:{"19/10 AL","29/12 ALN"}) {
         assert(clock_face_date_width(lunar)<=64);
         for(int offset=-10;offset<=10;++offset) clock_face_date(lunar,offset,{255,255,255});
     }
