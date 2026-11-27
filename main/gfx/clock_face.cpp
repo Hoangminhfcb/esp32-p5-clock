@@ -34,14 +34,14 @@ void clock_face_draw(const char *text,int y,int,Rgb color) {
 }
 void clock_face_time(int hour,int minute,bool colon,Rgb color) {
     const int digits[]={hour/10,hour%10,minute/10,minute%10};
-    const int xs[]={0,15,35,50};
-    for(int i=0;i<4;++i) for(int row=0;row<20;++row) for(int col=0;col<14;++col) {
-        if(CLOCK_DIGITS[digits[i]][row]&(1<<(13-col)))
-            panel_set_pixel(xs[i]+col,row,color.r,color.g,color.b);
+    const int xs[]={3,17,34,48};
+    for(int i=0;i<4;++i) for(int row=0;row<13;++row) for(int col=0;col<13;++col) {
+        if(CLOCK_DIGITS[digits[i]][row]&(1<<(12-col)))
+            panel_set_pixel(xs[i]+col,row+4,color.r,color.g,color.b);
     }
     if(colon) for(int row=0;row<2;++row) for(int col=0;col<2;++col) {
-        panel_set_pixel(30+col,6+row,color.r,color.g,color.b);
-        panel_set_pixel(30+col,13+row,color.r,color.g,color.b);
+        panel_set_pixel(31+col,7+row,color.r,color.g,color.b);
+        panel_set_pixel(31+col,13+row,color.r,color.g,color.b);
     }
 }
 int clock_face_date_width(const char *text) {return clock_face_width(text,1);}
@@ -57,12 +57,20 @@ void clock_face_date(const char *text,int offset_y,Rgb color) {
 
 void clock_face_seconds(int second) {
     if(second<0||second>59) return;
-    const int width=PANEL_W<60?PANEL_W:60;
-    const int left=(PANEL_W-width)/2;
-    const int lit=(second+1)*width/60;
-    for(int x=0;x<lit;++x) {
-        const Rgb color=hue_to_rgb(static_cast<uint8_t>(x*256/width+second*4));
-        panel_set_pixel(left+x,21,color.r,color.g,color.b);
+    // Khung (0,1)..(63,20): 164 điểm duy nhất, bắt đầu giữa cạnh trên.
+    constexpr int RIGHT=63,TOP=1,BOTTOM=20,PERIMETER=164;
+    const int lit=(second+1)*PERIMETER/60;
+    for(int i=0;i<lit;++i) {
+        // Thứ tự chuẩn: góc trên trái -> phải -> dưới -> trái -> trên.
+        // Dịch 32 điểm để mốc 00 giây ở giữa cạnh trên, x=32.
+        int position=(i+32)%PERIMETER;
+        int x,y;
+        if(position<63) {x=position;y=TOP;}
+        else if(position<82) {x=RIGHT;y=TOP+position-63;}
+        else if(position<145) {x=RIGHT-(position-82);y=BOTTOM;}
+        else {x=0;y=BOTTOM-(position-145);}
+        const Rgb color=hue_to_rgb(static_cast<uint8_t>(i*256/PERIMETER+second*4));
+        panel_set_pixel(x,y,color.r,color.g,color.b);
     }
 }
 

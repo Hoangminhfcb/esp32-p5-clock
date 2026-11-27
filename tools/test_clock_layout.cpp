@@ -20,26 +20,32 @@ int main() {
         clip_top=0;
         memset(pixels,0,sizeof(pixels));
         clock_face_time(h,m,true,{255,255,255});
-        assert(pixels[6][30]&&pixels[13][30]);
+        assert(pixels[7][31]&&pixels[13][31]);
         memset(pixels,0,sizeof(pixels));
         clock_face_time(h,m,false,{255,255,255});
-        assert(!pixels[6][30]&&!pixels[13][30]);
-        for(int y=20;y<32;++y)for(int x=0;x<64;++x)assert(!pixels[y][x]);
+        assert(!pixels[7][31]&&!pixels[13][31]);
+        for(int y=0;y<32;++y)for(int x=0;x<64;++x)if(pixels[y][x])assert(x>0&&x<63&&y>1&&y<20);
     }
-    // Mỗi giây thêm đúng một LED, không chạm hàng giờ hoặc hàng lịch.
+    // Viền bắt đầu giữa cạnh trên, đi hết 164 điểm, không vào vùng chữ/lịch.
+    std::set<int> previous;
     for(int second=0;second<60;++second) {
         memset(pixels,0,sizeof(pixels));
         clock_face_seconds(second);
-        int lit=0;
+        std::set<int> lit;
         for(int y=0;y<32;++y) for(int x=0;x<64;++x) if(pixels[y][x]) {
-            assert(y==21&&x>=2&&x<62);
-            ++lit;
+            assert(((y==1||y==20)&&x>=0&&x<64)||((x==0||x==63)&&y>=1&&y<=20));
+            lit.insert(y*64+x);
         }
-        assert(lit==second+1);
+        assert(lit.size()==static_cast<size_t>((second+1)*164/60));
+        assert(pixels[1][32]);
+        if(second<59) assert(!pixels[1][31]);
+        for(int point:previous) assert(lit.count(point));
+        previous=lit;
     }
+    assert(previous.size()==164);
     std::set<uint32_t> rainbow;
-    for(int x=2;x<62;++x) rainbow.insert(colors[21][x]);
-    assert(rainbow.size()>30);
+    for(int point:previous) rainbow.insert(colors[point/64][point%64]);
+    assert(rainbow.size()>60);
     for(bool connecting:{false,true}) {
         memset(pixels,0,sizeof(pixels));
         clock_face_status(connecting);

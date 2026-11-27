@@ -1,3 +1,9 @@
+# 2.4.0 — Silkscreen Bold và viền giây
+
+- Đổi sang font pixel Silkscreen Bold có sẵn, thu giờ xuống 13 px.
+- Viền rainbow quanh giờ bắt đầu giữa cạnh trên, chạy theo chiều kim đồng hồ trong 60 giây.
+- Giữ lịch, bảng màu tùy chọn và SETTING/CONNECTING.
+
 # 2.3.1 — Font giờ pixel có sẵn
 
 - Thay toàn bộ số giờ tự thiết kế bằng bitmap Spleen 8x16 phóng 2×, nét đậm, cao 20 px.
