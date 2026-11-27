@@ -14,10 +14,10 @@ int main() {
         clip_top=0;
         memset(pixels,0,sizeof(pixels));
         clock_face_time(h,m,true,{255,255,255});
-        assert(pixels[5][30]&&pixels[13][30]);
+        assert(pixels[6][30]&&pixels[13][30]);
         memset(pixels,0,sizeof(pixels));
         clock_face_time(h,m,false,{255,255,255});
-        assert(!pixels[5][30]&&!pixels[13][30]);
+        assert(!pixels[6][30]&&!pixels[13][30]);
         for(int y=20;y<32;++y)for(int x=0;x<64;++x)assert(!pixels[y][x]);
     }
     clip_top=22;

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cấu hình đồng hồ P5</title>
+<style>
+*{box-sizing:border-box}body{font:16px system-ui,sans-serif;background:#101923;color:#edf4fa;max-width:480px;margin:24px auto;padding:20px}h1{font-size:28px;margin-bottom:8px}p{line-height:1.5;color:#b9c9d8}label{display:block;margin-top:22px}input,select,button{width:100%;font:inherit;border-radius:10px;padding:13px;margin-top:8px;border:1px solid #395066;background:#1b2c3c;color:#fff}button{cursor:pointer;background:#60dbbd;color:#10251f;font-weight:650;border:0}button:disabled{opacity:.5;cursor:wait}.secondary{background:transparent;color:#b9e9ff;border:1px solid #395066}small{display:block;color:#a7b9c8;line-height:1.5;margin-top:22px}#status{min-height:48px}details{margin-top:16px}summary{cursor:pointer;color:#b9c9d8}
+</style>
+<h1>Đồng hồ P5</h1>
+<p>Chọn Wi-Fi nhà để lấy giờ tự động.</p>
+<form id="form">
+<label for="networks">Wi-Fi xung quanh (2.4 GHz)</label>
+<select id="networks" disabled><option value="">Đang dò Wi-Fi…</option></select>
+<button id="scan" class="secondary" type="button">Quét lại Wi-Fi</button>
+<details id="manual"><summary>Nhập tên Wi-Fi thủ công / mạng ẩn</summary>
+<label for="ssid">Tên Wi-Fi<input id="ssid" maxlength="32" autocomplete="off" placeholder="Nhập đúng tên mạng"></label>
+</details>
+<label for="password">Mật khẩu Wi-Fi<input id="password" type="password" maxlength="63" autocomplete="new-password" placeholder="Nhập mật khẩu mạng đã chọn"></label>
+<button id="connect" type="submit">Kết nối và lưu</button>
+</form>
+<p id="status" role="status" aria-live="polite"></p>
+<small>Chỉ lưu sau khi lấy giờ thành công. Wi-Fi trên đồng hồ sẽ tắt sau khi đồng bộ. Giữ BOOT 2 giây để mở lại cấu hình.</small>
+<script>
+const $=id=>document.getElementById(id);
+const list=$('networks'),ssid=$('ssid'),status=$('status'),scan=$('scan'),connect=$('connect');
+let scanning=false;
+list.addEventListener('change',()=>{ssid.value=list.value;$('password').focus()});
+ssid.addEventListener('input',()=>{if(ssid.value!==list.value)list.selectedIndex=0});
+async function scanWifi(){
+ if(scanning)return;
+ scanning=true;scan.disabled=true;list.disabled=true;
+ status.textContent='Đang dò mạng Wi-Fi xung quanh…';
+ try{
+  let result;
+  for(let attempt=0;attempt<25;attempt++){
+   const response=await fetch(attempt===0?'/scan?refresh=1':'/scan',{cache:'no-store'});
+   result=await response.json();
+   if(!response.ok)throw new Error(result.error||'Chưa quét được. Hãy thử lại.');
+   if(!result.scanning)break;
+   await new Promise(resolve=>setTimeout(resolve,600));
+  }
+  if(result.scanning)throw new Error('Quét lâu hơn dự kiến. Bấm Quét lại Wi-Fi.');
+  if(result.error)throw new Error(result.error);
+  const selected=ssid.value;
+  list.replaceChildren(new Option('Chọn Wi-Fi của bạn',''));
+  for(const network of result.networks){
+   const signal=network.rssi>=-60?'Mạnh':network.rssi>=-75?'Vừa':'Yếu';
+   list.add(new Option(`${network.ssid} · ${signal}${network.secured?'':' · Không mật khẩu'}`,network.ssid));
+  }
+  if([...list.options].some(option=>option.value===selected))list.value=selected;
+  list.disabled=result.networks.length===0;
+  status.textContent=result.networks.length?`Tìm thấy ${result.networks.length} mạng. Chọn mạng rồi nhập mật khẩu.`:'Không thấy mạng 2.4 GHz. Quét lại hoặc nhập tên thủ công.';
+ }catch(error){status.textContent=error.message;list.disabled=list.options.length<2}
+ finally{scanning=false;scan.disabled=false}
+}
+scan.addEventListener('click',scanWifi);
+$('form').addEventListener('submit',async event=>{
+ event.preventDefault();
+ const selected=ssid.value||list.value;
+ if(!selected){status.textContent='Hãy chọn Wi-Fi hoặc nhập tên mạng.';return}
+ connect.disabled=true;scan.disabled=true;
+ try{
+  const response=await fetch('/wifi',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ssid:selected,password:$('password').value})});
+  status.textContent=await response.text();
+ }catch(error){status.textContent='Kết nối thay đổi. Kiểm tra đồng hồ hoặc kết nối lại Wi-Fi cấu hình.'}
+ finally{connect.disabled=false;scan.disabled=false}
+});
+scanWifi();
+</script>
+</html>

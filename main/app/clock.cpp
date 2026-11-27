@@ -12,6 +12,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "esp_event.h"
 #include "esp_wifi.h"
 #include "esp_mac.h"
@@ -27,11 +28,83 @@ static QueueHandle_t s_credentials;
 static std::atomic<bool> s_connected{false}, s_setup{false}, s_open_setup{false};
 static char s_ap[32];
 static constexpr int64_t SECOND = 1000000LL;
-static const char PAGE[] = R"HTML(<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Đồng hồ P5</title><style>body{font:18px system-ui;max-width:440px;margin:40px auto;padding:20px;background:#101923;color:#eee}input,button{box-sizing:border-box;width:100%;padding:12px;margin:8px 0;font:inherit}button{background:#60dbbd;border:0}small{color:#bbb}</style><h1>Đồng hồ P5</h1><p>Giờ Việt Nam · Âm lịch Việt Nam</p><form id="f"><label>Tên Wi-Fi (2.4 GHz)<input id="ssid" required maxlength="32" autocomplete="off"></label><label>Mật khẩu<input id="pw" type="password" maxlength="63" autocomplete="new-password"></label><button>Kết nối và lưu</button></form><p id="msg"></p><small>Sau khi lấy giờ thành công, Wi-Fi sẽ tắt. Giữ BOOT 2 giây để mở lại cấu hình. Nếu không kết nối được, điểm cấu hình vẫn mở để sửa.</small><script>f.onsubmit=async e=>{e.preventDefault();try{let r=await fetch('/wifi',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ssid:ssid.value,password:pw.value})});msg.textContent=await r.text()}catch(e){msg.textContent='Mất kết nối. Kiểm tra màn hình hoặc kết nối lại Wi-Fi cấu hình.'}}</script></html>)HTML";
+extern const char clock_html_start[] asm("_binary_clock_html_start");
+static std::atomic<bool> s_scan_requested{false}, s_scan_busy{false}, s_connecting{false};
+static SemaphoreHandle_t s_scan_mutex;
+static char s_scan_result[8192]="{\"scanning\":false,\"networks\":[]}";
+
+// HTTP chỉ yêu cầu quét; tác vụ mạng giữ quyền điều khiển Wi-Fi.
+static esp_err_t scan_request(httpd_req_t *r) {
+    httpd_resp_set_type(r,"application/json; charset=utf-8");
+    httpd_resp_set_hdr(r,"Cache-Control","no-store");
+    if(!s_setup||s_connecting) {
+        httpd_resp_set_status(r,"409 Conflict");
+        return httpd_resp_sendstr(r,"{\"error\":\"Đồng hồ đang kết nối Wi-Fi. Chờ một chút rồi quét lại.\"}");
+    }
+    char query[32]={};
+    httpd_req_get_url_query_str(r,query,sizeof(query));
+    if(strcmp(query,"refresh=1")==0) {
+        bool expected=false;
+        if(s_scan_busy.compare_exchange_strong(expected,true)) s_scan_requested=true;
+    }
+    if(s_scan_busy) return httpd_resp_sendstr(r,"{\"scanning\":true,\"networks\":[]}");
+    xSemaphoreTake(s_scan_mutex,portMAX_DELAY);
+    char *copy=strdup(s_scan_result);
+    xSemaphoreGive(s_scan_mutex);
+    if(!copy) return httpd_resp_send_err(r,HTTPD_500_INTERNAL_SERVER_ERROR,"Khong du bo nho");
+    esp_err_t result=httpd_resp_sendstr(r,copy);
+    free(copy);
+    return result;
+}
+static void scan_wifi() {
+    wifi_scan_config_t config={};
+    config.show_hidden=false;
+    config.scan_time.active.min=40;
+    config.scan_time.active.max=100;
+    const esp_err_t error=esp_wifi_scan_start(&config,true);
+    cJSON *root=cJSON_CreateObject();
+    cJSON_AddBoolToObject(root,"scanning",false);
+    cJSON *networks=cJSON_AddArrayToObject(root,"networks");
+    if(error==ESP_OK) {
+        wifi_ap_record_t records[24]={};
+        uint16_t count=24;
+        if(esp_wifi_scan_get_ap_records(&count,records)==ESP_OK) {
+            for(int i=0;i<count;++i) {
+                records[i].ssid[32]=0;
+                if(!records[i].ssid[0]) continue;
+                bool duplicate=false;
+                for(int j=0;j<i;++j) if(strcmp((const char*)records[i].ssid,(const char*)records[j].ssid)==0) duplicate=true;
+                if(duplicate) continue;
+                cJSON *item=cJSON_CreateObject();
+                cJSON_AddStringToObject(item,"ssid",(const char*)records[i].ssid);
+                cJSON_AddNumberToObject(item,"rssi",records[i].rssi);
+                cJSON_AddBoolToObject(item,"secured",records[i].authmode!=WIFI_AUTH_OPEN);
+                cJSON_AddItemToArray(networks,item);
+            }
+            ESP_LOGI("clock","Quet WiFi: %d mang",cJSON_GetArraySize(networks));
+        } else {
+            esp_wifi_clear_ap_list();
+            cJSON_AddStringToObject(root,"error","Không đọc được danh sách Wi-Fi. Hãy quét lại.");
+        }
+    } else {
+        esp_wifi_clear_ap_list();
+        cJSON_AddStringToObject(root,"error","Chưa quét được Wi-Fi. Chờ một chút rồi thử lại.");
+        ESP_LOGW("clock","Quet WiFi: %s",esp_err_to_name(error));
+    }
+    char *json=cJSON_PrintUnformatted(root);
+    if(json) {
+        xSemaphoreTake(s_scan_mutex,portMAX_DELAY);
+        snprintf(s_scan_result,sizeof(s_scan_result),"%s",json);
+        xSemaphoreGive(s_scan_mutex);
+        cJSON_free(json);
+    }
+    cJSON_Delete(root);
+    s_scan_busy=false;
+}
 static esp_err_t page(httpd_req_t *r) {
     httpd_resp_set_type(r,"text/html; charset=utf-8");
     httpd_resp_set_hdr(r,"Cache-Control","no-store");
-    return httpd_resp_send(r,PAGE,HTTPD_RESP_USE_STRLEN);
+    return httpd_resp_send(r,clock_html_start,HTTPD_RESP_USE_STRLEN);
 }
 static esp_err_t save(httpd_req_t *r) {
     if(r->content_len<=0 || r->content_len>512) return httpd_resp_send_err(r,HTTPD_400_BAD_REQUEST,"Yeu cau qua dai");
@@ -96,8 +169,8 @@ static void display(void *) {
             clock_face_date(line,offset,date_color);
         } else {
             center("--:--",0,17,{255,150,20});
-            center(setup?"CAI WIFI":"LAY GIO",18,6,{60,220,255});
-            center("192.168.4.1",26,6,{120,255,100});
+            center(setup?"CAI WIFI":"LAY GIO",13,6,{60,220,255});
+            center("192.168.4.1",24,6,{120,255,100});
         }
         panel_present();
         vTaskDelay(pdMS_TO_TICKS(40));
@@ -117,16 +190,18 @@ static void network(void *) {
     int64_t deadline=0, next_sync=0, setup_until=0, reconnect=0;
     auto setup=[&]() {
         if(radio) { if(sntp){esp_netif_sntp_deinit();sntp=false;} esp_wifi_stop(); }
-        s_connected=false; trying=false;
+        s_connected=false; trying=false;s_connecting=false;
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
         wifi_config_t ap={}; strcpy((char*)ap.ap.ssid,s_ap); ap.ap.ssid_len=strlen(s_ap); ap.ap.max_connection=2; ap.ap.channel=6; ap.ap.authmode=WIFI_AUTH_OPEN;
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP,&ap)); ESP_ERROR_CHECK(esp_wifi_start());radio=true;s_setup=true;
         setup_until=esp_timer_get_time()+300*SECOND;
         if(!server) {
-            httpd_config_t hc=HTTPD_DEFAULT_CONFIG(); ESP_ERROR_CHECK(httpd_start(&server,&hc));
+            httpd_config_t hc=HTTPD_DEFAULT_CONFIG();hc.stack_size=6144; ESP_ERROR_CHECK(httpd_start(&server,&hc));
             httpd_uri_t root={};root.uri="/";root.method=HTTP_GET;root.handler=page;ESP_ERROR_CHECK(httpd_register_uri_handler(server,&root));
+            httpd_uri_t scan={};scan.uri="/scan";scan.method=HTTP_GET;scan.handler=scan_request;ESP_ERROR_CHECK(httpd_register_uri_handler(server,&scan));
             httpd_uri_t post={};post.uri="/wifi";post.method=HTTP_POST;post.handler=save;ESP_ERROR_CHECK(httpd_register_uri_handler(server,&post));
         }
+        s_scan_busy=true;s_scan_requested=true;
         ESP_LOGI("clock","Cau hinh: %s -> http://192.168.4.1",s_ap);
     };
     if(!has_saved) setup();
@@ -137,7 +212,7 @@ static void network(void *) {
         if(received || (!trying&&now>=next_sync&&has_saved)) {
             if(sntp){esp_netif_sntp_deinit();sntp=false;}
             if(!received) candidate=saved;
-            pending=received;
+            pending=received;s_connecting=true;
             if(radio) esp_wifi_disconnect(); else {ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));}
             wifi_config_t sta={}; memcpy(sta.sta.ssid,candidate.ssid,strlen(candidate.ssid));memcpy(sta.sta.password,candidate.password,strlen(candidate.password));
             ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA,&sta));
@@ -152,7 +227,7 @@ static void network(void *) {
         bool synced=trying&&sntp&&esp_netif_sntp_sync_wait(0)==ESP_OK;
         if(synced || (trying&&now>=deadline)) {
             if(sntp){esp_netif_sntp_deinit();sntp=false;}
-            trying=false;
+            trying=false;s_connecting=false;
             if(synced) {
                 if(pending) {
                     esp_err_t err=nvs_open("clock",NVS_READWRITE,&h);
@@ -175,13 +250,18 @@ static void network(void *) {
         if(s_setup&&!trying&&has_saved&&time(nullptr)>=1704067200&&now>=setup_until) {
             if(server){httpd_stop(server);server=nullptr;}esp_wifi_stop();radio=false;s_setup=false;
         }
+        if(s_scan_requested.exchange(false)) {
+            if(s_setup&&!trying) scan_wifi();
+            else s_scan_busy=false;
+        }
         vTaskDelay(pdMS_TO_TICKS(200));
     }
 }
 void clock_start() {
     setenv("TZ","ICT-7",1);tzset();
+    s_scan_mutex=xSemaphoreCreateMutex();configASSERT(s_scan_mutex);
     s_credentials=xQueueCreate(1,sizeof(Credentials));configASSERT(s_credentials);
     panel_set_brightness(48);
     configASSERT(xTaskCreate(display,"clock_display",4096,nullptr,3,nullptr)==pdPASS);
-    configASSERT(xTaskCreate(network,"clock_network",6144,nullptr,4,nullptr)==pdPASS);
+    configASSERT(xTaskCreate(network,"clock_network",8192,nullptr,4,nullptr)==pdPASS);
 }

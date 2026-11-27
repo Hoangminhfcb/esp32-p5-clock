@@ -1,3 +1,9 @@
+# 2.2.0 — Font bitmap tự nhiên và chọn Wi-Fi
+
+- Font số DejaVu ExtraLight 19 px, lịch Spleen 8 px: không kéo giãn, không dùng bảy đoạn.
+- Trang cấu hình tự quét Wi-Fi, cho chọn SSID, hiển thị mức sóng/mạng mở và quét lại.
+- Quét trong tác vụ mạng, không quét đồng thời với kết nối; giữ ô nhập tên mạng ẩn.
+
 # 2.1.0 — Đồng hồ hai hàng, chữ lớn
 
 - Tăng giờ lên 20 px và lịch lên 10 px; chỉ hiện hai hàng.
