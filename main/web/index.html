@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HUB75 LED</title>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--line:#2a2f3a;--txt:#e8eaf0;--mut:#8b93a6;--acc:#3ddc84;--warn:#ffb020}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:4px 0 14px;display:flex;align-items:center;gap:8px}
+h1 span{width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+label.t{display:block;font-size:13px;color:var(--mut);margin:0 0 6px}
+textarea{width:100%;background:#0c0e12;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;resize:vertical;min-height:60px}
+.row{display:flex;gap:12px;flex-wrap:wrap}.row>div{flex:1 1 200px}
+.gap{margin-top:14px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;background:#0c0e12;color:var(--txt);border:0;border-right:1px solid var(--line);padding:9px 2px;font:inherit;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--acc);color:#000;font-weight:600}
+.seg button:disabled{opacity:.3;cursor:not-allowed}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:#0c0e12;color:var(--mut);font:600 14px system-ui;cursor:pointer}
+.tabs button.on{border-color:var(--acc);color:var(--txt);background:#1d2a22}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.sw{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sw i{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.sw i.on{border-color:#fff}
+input[type=color]{width:40px;height:32px;border:0;background:none;padding:0}
+#led{width:100%;background:#000;border-radius:8px;display:block}
+.info{font-size:13px;color:var(--mut);margin-top:8px}
+.info div{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:4px}
+.tag{padding:1px 8px;border-radius:99px;font-size:12px;background:#243;color:var(--acc);white-space:nowrap}
+.tag.sc{background:#432;color:var(--warn)}
+.fonts{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+.fonts div{border:1px solid var(--line);border-radius:8px;padding:6px;cursor:pointer;background:#0c0e12}
+.fonts div.on{border-color:var(--acc)}
+.fonts canvas{width:100%;display:block}
+.fonts small{color:var(--mut);font-size:11px}
+.act{display:flex;gap:10px}
+.act button{flex:1;padding:12px;border-radius:10px;border:0;font:600 15px system-ui;cursor:pointer}
+#send{background:var(--acc);color:#000}#reset{flex:0 0 auto;background:#2a2f3a;color:var(--txt)}
+#msg{text-align:center;font-size:13px;color:var(--mut);min-height:20px;margin-top:8px}
+.val{float:right;color:var(--txt)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <h1><span></span>Bảng LED HUB75</h1>
+
+  <div class="card">
+    <canvas id="led"></canvas>
+    <div class="info" id="info"></div>
+  </div>
+
+  <div class="card">
+    <label class="t">Số hàng chữ</label>
+    <div class="seg" id="lines"><button data-v="1">1 hàng</button><button data-v="2">2 hàng</button></div>
+  </div>
+
+  <div class="tabs" id="tabs"><button data-v="0">Hàng 1</button><button data-v="1">Hàng 2</button></div>
+
+  <div class="card">
+    <label class="t" for="text">Nội dung <span class="val" id="cnt"></span></label>
+    <textarea id="text" placeholder="Nhập chữ, gõ tiếng Việt có dấu thoải mái…"></textarea>
+
+    <label class="t gap">Font</label>
+    <div class="fonts" id="fonts"></div>
+
+    <div class="row gap">
+      <div>
+        <label class="t">Size (phóng to)</label>
+        <div class="seg" id="scale"></div>
+      </div>
+      <div>
+        <label class="t">Căn lề (khi không chạy chữ)</label>
+        <div class="seg" id="align"><button data-v="0">Trái</button><button data-v="1">Giữa</button><button data-v="2">Phải</button></div>
+      </div>
+    </div>
+
+    <label class="t gap">Màu chữ</label>
+    <div class="seg" id="effect"><button data-v="0">Một màu</button><button data-v="1">Cầu vồng</button><button data-v="2">Đổi màu</button></div>
+    <div class="sw gap" id="sw"><input type="color" id="color"></div>
+
+    <label class="t gap">Tốc độ chạy chữ <span class="val" id="sV"></span></label>
+    <input type="range" id="speed" min="10" max="150">
+  </div>
+
+  <div class="card">
+    <label class="t">Độ sáng <span class="val" id="bV"></span></label>
+    <input type="range" id="brightness" min="5" max="255">
+    <label class="t gap">Tốc độ đổi màu (cầu vồng) <span class="val" id="fV"></span></label>
+    <input type="range" id="fx" min="1" max="10">
+  </div>
+
+  <div class="act">
+    <button id="send">Gửi lên bảng LED</button>
+    <button id="reset" title="Khôi phục mặc định">Mặc định</button>
+  </div>
+  <div id="msg"></div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const SW = ['#ff0000','#ff7a00','#ffd400','#00ff00','#00e5ff','#0060ff','#b000ff','#ff2fa0','#ffffff'];
+const PX = 8;
+let S = null, FONTS = [], FD = {}, EXT = new Map(), W = 64, H = 32, GAP = 1, MAXB = 255, E = 0;
+let anim = [{x: 0, next: 0}, {x: 0, next: 0}], hue = 0, nextHue = 0;
+
+// ================= Font (giong het firmware) =================
+async function loadFont(id){
+  if (!FD[id]) {
+    const f = await (await fetch('/api/font?id=' + id)).json();
+    f.off = []; let o = 0; for (const w of f.w){ f.off.push(o); o += w; }
+    FD[id] = f;
+  }
+  return FD[id];
+}
+function gIndex(cp){
+  if (cp >= 0x20 && cp <= 0x7e) return cp - 0x20;
+  const i = EXT.get(cp);
+  return i === undefined ? 0x3f - 0x20 : 95 + i;
+}
+const isComb = cp => cp >= 0x300 && cp <= 0x36f;
+const norm = t => t.normalize('NFC').replace(/[\r\n\t]+/g, ' ');
+
+function measure(f, t, sc){
+  let w = 0, ink = 0, last = -1;
+  for (const ch of norm(t)){
+    const cp = ch.codePointAt(0); if (isComb(cp)) continue;
+    last = gIndex(cp); w += f.w[last];
+    for (let k = 0; k < f.w[last]; k++) ink |= f.c[f.off[last] + k];
+  }
+  if (last >= 0) for (let k = f.w[last] - 1; k >= 0 && f.c[f.off[last] + k] === 0; k--) w--;
+  let top = f.at, bot = f.ab;
+  if (ink) { ink >>>= 0; top = Math.min(top, 31 - Math.clz32(ink & -ink)); bot = Math.max(bot, 31 - Math.clz32(ink)); }
+  return { w: w * sc, top, h: (bot - top + 1) * sc };
+}
+function hueRGB(h){
+  h &= 255; const reg = Math.floor(h / 43), rem = (h - reg * 43) * 6, up = rem, dn = 255 - rem;
+  return [[255,up,0],[dn,255,0],[0,255,up],[0,dn,255],[up,0,255],[255,0,dn]][reg];
+}
+// Ve 1 dong vao buf (mau RGB moi pixel)
+function drawText(buf, bw, bh, f, t, x, y, sc, top, colorAt){
+  for (const ch of norm(t)){
+    const cp = ch.codePointAt(0); if (isComb(cp)) continue;
+    const i = gIndex(cp);
+    for (let c = 0; c < f.w[i]; c++){
+      const px = x + c * sc; if (px >= bw) return;
+      let bits = f.c[f.off[i] + c] >>> top; if (!bits || px + sc <= 0) continue;
+      const col = colorAt(Math.max(0, px));
+      for (let r = 0; bits; r++, bits >>>= 1) if (bits & 1)
+        for (let dx = 0; dx < sc; dx++) for (let dy = 0; dy < sc; dy++){
+          const X = px + dx, Y = y + r * sc + dy;
+          if (X >= 0 && X < bw && Y >= 0 && Y < bh) buf[Y * bw + X] = col;
+        }
+    }
+    x += f.w[i] * sc; if (x >= bw) return;
+  }
+}
+function paint(cv, buf, bw, bh, px){
+  const g = cv.getContext('2d');
+  g.fillStyle = '#000'; g.fillRect(0, 0, cv.width, cv.height);
+  for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++){
+    const c = buf[y * bw + x];
+    g.fillStyle = c ? `rgb(${c[0]},${c[1]},${c[2]})` : '#16181d';
+    g.beginPath(); g.arc(x * px + px / 2, y * px + px / 2, px * 0.42, 0, 7); g.fill();
+  }
+}
+const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.substr(i, 2), 16));
+
+// ================= Bo cuc (giong display_task.cpp) =================
+function layout(){
+  const L = [];
+  for (let i = 0; i < S.lines; i++){
+    const l = S.line[i], f = FD[l.font]; if (!f) return null;
+    const m = measure(f, l.text, l.scale);
+    L.push({ l, f, m, scroll: m.w > W });
+  }
+  const total = L.reduce((a, b) => a + b.m.h, 0), free = H - total;
+  if (L.length === 1) L[0].y = Math.floor(free / 2);
+  else { const e = free > 0 ? Math.floor(free / 3) : 0; L[0].y = e; L[1].y = H - e - L[1].m.h; }
+  return L;
+}
+function resetScroll(){ const t = performance.now(); anim = [{x: W, next: t}, {x: W, next: t}]; }
+
+function frame(ts){
+  requestAnimationFrame(frame);
+  if (!S) return;
+  const L = layout(); if (!L) return;
+  if (ts >= nextHue){ hue = (hue + S.fx) & 255; nextHue = ts + 20; }
+  const buf = new Array(W * H).fill(0);
+  let info = '';
+  L.forEach((o, i) => {
+    const a = anim[i];
+    let x;
+    if (o.scroll){
+      while (ts >= a.next){ if (--a.x < -o.m.w) a.x = W; a.next += o.l.speed; }
+      x = a.x;
+    } else x = o.l.align == 0 ? 0 : o.l.align == 2 ? W - o.m.w : Math.floor((W - o.m.w) / 2);
+    const h0 = (hue + i * 64) & 255, solid = hex2rgb(o.l.color), cyc = hueRGB(h0);
+    const colorAt = o.l.effect == 1 ? (px => hueRGB(h0 + Math.floor(px * 256 / W))) : o.l.effect == 2 ? (() => cyc) : (() => solid);
+    drawText(buf, W, H, o.f, o.l.text, x, o.y, o.l.scale, o.m.top, colorAt);
+    info += `<div><span>${L.length > 1 ? 'Hàng ' + (i + 1) + ': ' : ''}rộng ${o.m.w}px · cao ${o.m.h}px</span>` +
+            `<span class="tag${o.scroll ? ' sc' : ''}">${o.scroll ? 'Dài hơn màn hình → chạy chữ' : 'Vừa màn hình → đứng yên'}</span></div>`;
+  });
+  const total = L.reduce((a, b) => a + b.m.h, 0) + (L.length - 1) * GAP;
+  if (total > H) info += `<div><span class="tag sc">Tổng chiều cao ${total}px > ${H}px — giảm size</span></div>`;
+  paint($('led'), buf, W, H, PX);
+  if ($('info').innerHTML !== info) $('info').innerHTML = info;
+}
+
+// ================= Giao dien =================
+const cur = () => S.line[E];
+function lineH(i, sc){ const l = S.line[i], f = FD[l.font]; return f ? measure(f, l.text, sc ?? l.scale).h : 0; }
+
+function renderScale(){
+  const box = $('scale'); box.innerHTML = '';
+  const other = S.lines === 2 ? lineH(1 - E) + GAP : 0;
+  for (let s = 1; s <= 4; s++){
+    const b = document.createElement('button');
+    const h = lineH(E, s);
+    b.textContent = s + 'x';
+    b.disabled = FD[cur().font] && s > 1 && h + other > H;
+    b.title = `Cao ${h}px`;
+    if (s === cur().scale) b.className = 'on';
+    b.onclick = () => { cur().scale = s; renderScale(); resetScroll(); };
+    box.appendChild(b);
+  }
+}
+function seg(id, v){ for (const b of $(id).children) b.className = (+b.dataset.v === v) ? 'on' : ''; }
+function renderLine(){
+  const l = cur();
+  $('text').value = l.text;
+  seg('align', l.align); seg('effect', l.effect);
+  $('sw').classList.toggle('hide', l.effect != 0);
+  for (const i of $('sw').querySelectorAll('i')) i.className = i.dataset.c === l.color ? 'on' : '';
+  $('color').value = l.color;
+  $('speed').value = l.speed; $('sV').textContent = l.speed + ' ms/px';
+  for (const d of $('fonts').children) d.className = (+d.dataset.id === l.font) ? 'on' : '';
+  updCount(); renderScale();
+}
+function renderAll(){
+  seg('lines', S.lines);
+  $('tabs').classList.toggle('hide', S.lines < 2);
+  if (S.lines < 2) E = 0;
+  seg('tabs', E);
+  $('brightness').value = S.brightness; $('bV').textContent = Math.round(S.brightness / 2.55) + '%';
+  $('fx').value = S.fx; $('fV').textContent = S.fx;
+  renderLine();
+}
+function updCount(){
+  const n = new TextEncoder().encode(norm(cur().text)).length;
+  $('cnt').textContent = `${n}/${MAXB} byte`;
+  $('cnt').style.color = n > MAXB ? '#ff6b6b' : '';
+}
+async function renderFonts(){
+  const box = $('fonts'); box.innerHTML = '';
+  for (const fi of FONTS){
+    const d = document.createElement('div'); d.dataset.id = fi.id;
+    const cv = document.createElement('canvas');
+    const sm = document.createElement('small'); sm.textContent = `${fi.name} · ${fi.h}px`;
+    d.append(cv, sm); box.appendChild(d);
+    d.onclick = async () => { await loadFont(fi.id); cur().font = fi.id; renderLine(); resetScroll(); };
+  }
+  renderLine();
+  for (const fi of FONTS){                    // tai lan luot de khong qua tai ESP32
+    const f = await loadFont(fi.id), cv = box.querySelector(`[data-id="${fi.id}"] canvas`);
+    const t = 'Việt Ấn 12', m = measure(f, t, 1), bw = 64, bh = 24, px = 3;
+    cv.width = bw * px; cv.height = bh * px;
+    const buf = new Array(bw * bh).fill(0);
+    drawText(buf, bw, bh, f, t, 1, Math.max(0, Math.floor((bh - m.h) / 2)), 1, m.top, () => [255, 212, 0]);
+    paint(cv, buf, bw, bh, px);
+  }
+  renderScale();
+}
+
+function apply(st){
+  S = { lines: st.lines, brightness: st.brightness, fx: st.fx,
+        line: st.line.map(l => ({ text: l.text, font: l.font, scale: l.scale, align: l.align,
+                                  effect: l.effect, color: l.color, speed: l.speed })) };
+  renderAll(); resetScroll();
+}
+function msg(t, ok = true){ const m = $('msg'); m.textContent = t; m.style.color = ok ? 'var(--acc)' : '#ff6b6b'; }
+
+function cutBytes(t){                         // cat chu cho vua so byte toi da
+  t = norm(t); const enc = new TextEncoder();
+  while (enc.encode(t).length > MAXB) t = [...t].slice(0, -1).join('');
+  return t;
+}
+async function send(){
+  const p = new URLSearchParams({ lines: S.lines, brightness: S.brightness, fx: S.fx });
+  S.line.forEach((l, i) => {
+    p.set('text' + i, cutBytes(l.text)); p.set('font' + i, l.font); p.set('scale' + i, l.scale);
+    p.set('align' + i, l.align); p.set('effect' + i, l.effect); p.set('color' + i, l.color); p.set('speed' + i, l.speed);
+  });
+  try {
+    const r = await fetch('/api/set', { method: 'POST', body: p });
+    if (!r.ok) throw 0;
+    apply(await r.json()); msg('Đã gửi ✓');
+  } catch(e){ msg('Lỗi gửi, kiểm tra kết nối WiFi', false); }
+}
+
+async function init(){
+  const st = await (await fetch('/api/state')).json();
+  W = st.panel.w; H = st.panel.h; GAP = st.gap; MAXB = st.maxBytes; FONTS = st.fonts;
+  st.ext.forEach((cp, i) => EXT.set(cp, i));
+  const cv = $('led'); cv.width = W * PX; cv.height = H * PX;
+  for (const c of SW){
+    const i = document.createElement('i'); i.style.background = c; i.dataset.c = c;
+    i.onclick = () => { cur().color = c; renderLine(); };
+    $('sw').insertBefore(i, $('color'));
+  }
+  await Promise.all([loadFont(st.line[0].font), loadFont(st.line[1].font)]);
+  apply(st);
+  requestAnimationFrame(frame);
+  renderFonts();
+}
+
+// ================= Su kien =================
+for (const b of $('lines').children) b.onclick = () => { S.lines = +b.dataset.v; if (S.lines === 2) E = 1; renderAll(); resetScroll(); };
+for (const b of $('tabs').children)  b.onclick = () => { E = +b.dataset.v; renderAll(); };
+for (const b of $('align').children) b.onclick = () => { cur().align = +b.dataset.v; renderLine(); };
+for (const b of $('effect').children) b.onclick = () => { cur().effect = +b.dataset.v; renderLine(); };
+$('text').oninput = e => { cur().text = e.target.value; updCount(); renderScale(); resetScroll(); };
+$('text').onkeydown = e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) send(); };
+$('color').oninput = e => { cur().color = e.target.value; renderLine(); };
+$('speed').oninput = e => { cur().speed = +e.target.value; $('sV').textContent = cur().speed + ' ms/px'; };
+$('brightness').oninput = e => { S.brightness = +e.target.value; $('bV').textContent = Math.round(S.brightness / 2.55) + '%'; };
+$('brightness').onchange = send;              // do sang: gui ngay khi tha thanh truot
+$('fx').oninput = e => { S.fx = +e.target.value; $('fV').textContent = S.fx; };
+$('send').onclick = send;
+$('reset').onclick = async () => {
+  if (!confirm('Khôi phục cài đặt mặc định?')) return;
+  const st = await (await fetch('/api/reset', { method: 'POST' })).json();
+  await Promise.all([loadFont(st.line[0].font), loadFont(st.line[1].font)]);
+  apply(st); msg('Đã khôi phục mặc định');
+};
+init().catch(() => msg('Không tải được dữ liệu từ ESP32', false));
+</script>
+</body>
+</html>

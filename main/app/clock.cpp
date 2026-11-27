@@ -1,0 +1,168 @@
+#include "app/clock.h"
+#include "app/lunar.h"
+#include "hal/panel.h"
+#include "hal/button.h"
+#include "gfx/clock_face.h"
+#include "config/app_config.h"
+#include <atomic>
+#include <cstring>
+#include <cstdio>
+#include <ctime>
+#include <cstdlib>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "esp_event.h"
+#include "esp_wifi.h"
+#include "esp_mac.h"
+#include "esp_netif_sntp.h"
+#include "esp_http_server.h"
+#include "esp_timer.h"
+#include "esp_log.h"
+#include "nvs.h"
+#include "cJSON.h"
+
+struct Credentials { char ssid[33]; char password[65]; };
+static QueueHandle_t s_credentials;
+static std::atomic<bool> s_connected{false}, s_setup{false}, s_open_setup{false};
+static char s_ap[32];
+static constexpr int64_t SECOND = 1000000LL;
+static const char PAGE[] = R"HTML(<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Đồng hồ P5</title><style>body{font:18px system-ui;max-width:440px;margin:40px auto;padding:20px;background:#101923;color:#eee}input,button{box-sizing:border-box;width:100%;padding:12px;margin:8px 0;font:inherit}button{background:#60dbbd;border:0}small{color:#bbb}</style><h1>Đồng hồ P5</h1><p>Giờ Việt Nam · Âm lịch Việt Nam</p><form id="f"><label>Tên Wi-Fi (2.4 GHz)<input id="ssid" required maxlength="32" autocomplete="off"></label><label>Mật khẩu<input id="pw" type="password" maxlength="63" autocomplete="new-password"></label><button>Kết nối và lưu</button></form><p id="msg"></p><small>Sau khi lấy giờ thành công, Wi-Fi sẽ tắt. Giữ BOOT 2 giây để mở lại cấu hình. Nếu không kết nối được, điểm cấu hình vẫn mở để sửa.</small><script>f.onsubmit=async e=>{e.preventDefault();try{let r=await fetch('/wifi',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ssid:ssid.value,password:pw.value})});msg.textContent=await r.text()}catch(e){msg.textContent='Mất kết nối. Kiểm tra màn hình hoặc kết nối lại Wi-Fi cấu hình.'}}</script></html>)HTML";
+static esp_err_t page(httpd_req_t *r) {
+    httpd_resp_set_type(r,"text/html; charset=utf-8");
+    httpd_resp_set_hdr(r,"Cache-Control","no-store");
+    return httpd_resp_send(r,PAGE,HTTPD_RESP_USE_STRLEN);
+}
+static esp_err_t save(httpd_req_t *r) {
+    if(r->content_len<=0 || r->content_len>512) return httpd_resp_send_err(r,HTTPD_400_BAD_REQUEST,"Yeu cau qua dai");
+    char buf[513]; int n=0;
+    while(n<r->content_len) { int got=httpd_req_recv(r,buf+n,r->content_len-n); if(got<=0) return ESP_FAIL; n+=got; }
+    buf[n]=0; cJSON *j=cJSON_Parse(buf);
+    const cJSON *ssid=cJSON_GetObjectItemCaseSensitive(j,"ssid"), *pw=cJSON_GetObjectItemCaseSensitive(j,"password");
+    if(!cJSON_IsString(ssid)||!cJSON_IsString(pw)||strlen(ssid->valuestring)<1||strlen(ssid->valuestring)>32||strlen(pw->valuestring)>63||(strlen(pw->valuestring)>0&&strlen(pw->valuestring)<8)) {
+        cJSON_Delete(j); return httpd_resp_send_err(r,HTTPD_400_BAD_REQUEST,"SSID 1-32 byte; mat khau rong hoac 8-63 byte");
+    }
+    Credentials c={}; strcpy(c.ssid,ssid->valuestring); strcpy(c.password,pw->valuestring); cJSON_Delete(j);
+    xQueueOverwrite(s_credentials,&c);
+    httpd_resp_set_type(r,"text/plain; charset=utf-8");
+    return httpd_resp_sendstr(r,"Đang thử Wi-Fi và lấy giờ. Chỉ lưu sau khi thành công. Nếu thất bại, hãy nhập lại.");
+}
+static void event(void *,esp_event_base_t base,int32_t id,void *) {
+    if(base==IP_EVENT && id==IP_EVENT_STA_GOT_IP) s_connected=true;
+    if(base==WIFI_EVENT && id==WIFI_EVENT_STA_DISCONNECTED) s_connected=false;
+}
+static void center(const char *str,int y,int size,Rgb color) {
+    clock_face_draw(str,y,size>=17?3:1,color);
+}
+static void display(void *) {
+    button_init(); bool latched=false;
+    time_t last_frame=-1; bool last_setup=false;
+    for(;;) {
+        auto held=button_held_ms(); if(held>=2000&&!latched) {s_open_setup=true;latched=true;} if(!held) latched=false;
+        time_t now=time(nullptr);
+        const bool setup=s_setup.load();
+        // Nút vẫn được đọc mỗi 200 ms; chỉ vẽ lại khi nội dung đổi.
+        if(now/5==last_frame && setup==last_setup) {vTaskDelay(pdMS_TO_TICKS(200));continue;}
+        last_frame=now/5;last_setup=setup;
+        tm t={};localtime_r(&now,&t);
+        panel_clear(); char line[40];
+        if(t.tm_year>=124) {
+            snprintf(line,sizeof(line),"%02d:%02d",t.tm_hour,t.tm_min); center(line,0,17,{255,150,20});
+            static const char *WEEKDAYS[]={"CN","T2","T3","T4","T5","T6","T7"};
+            const char *wd=WEEKDAYS[t.tm_wday];
+            snprintf(line,sizeof(line),"%s %02d/%02d",wd,t.tm_mday,t.tm_mon+1); center(line,18,6,{60,220,255});
+            auto l=lunar_date(t.tm_mday,t.tm_mon+1,t.tm_year+1900);
+            if((t.tm_sec/5)%2) snprintf(line,sizeof(line),"%d AL%d",t.tm_year+1900,l.year);
+            else snprintf(line,sizeof(line),"AL%02d/%02d%s",l.day,l.month,l.leap?"N":"");
+            center(line,26,6,{120,255,100});
+            if(s_setup) panel_set_pixel(63,0,0,0,255);
+        } else {
+            center("--:--",0,17,{255,150,20});
+            center(s_setup?"CAI WIFI":"LAY GIO",18,6,{60,220,255});
+            center("192.168.4.1",26,6,{120,255,100});
+        }
+        panel_present(); vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
+static void network(void *) {
+    Credentials saved={}, candidate={}; bool has_saved=false;
+    nvs_handle_t h; if(nvs_open("clock",NVS_READWRITE,&h)==ESP_OK) {size_t n=sizeof(saved); has_saved=nvs_get_blob(h,"wifi",&saved,&n)==ESP_OK&&n==sizeof(saved)&&saved.ssid[0]&&memchr(saved.ssid,0,sizeof(saved.ssid))&&memchr(saved.password,0,sizeof(saved.password)); nvs_close(h);}
+    ESP_ERROR_CHECK(esp_netif_init()); ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_ap(); esp_netif_create_default_wifi_sta();
+    wifi_init_config_t cfg=WIFI_INIT_CONFIG_DEFAULT(); ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT,ESP_EVENT_ANY_ID,event,nullptr));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT,IP_EVENT_STA_GOT_IP,event,nullptr));
+    uint8_t mac[6]; esp_read_mac(mac,ESP_MAC_WIFI_STA); snprintf(s_ap,sizeof(s_ap),"P5-CLOCK-%02X%02X",mac[4],mac[5]);
+    httpd_handle_t server=nullptr; bool radio=false, trying=false, pending=false, sntp=false;
+    int64_t deadline=0, next_sync=0, setup_until=0, reconnect=0;
+    auto setup=[&]() {
+        if(radio) { if(sntp){esp_netif_sntp_deinit();sntp=false;} esp_wifi_stop(); }
+        s_connected=false; trying=false;
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+        wifi_config_t ap={}; strcpy((char*)ap.ap.ssid,s_ap); ap.ap.ssid_len=strlen(s_ap); ap.ap.max_connection=2; ap.ap.channel=6; ap.ap.authmode=WIFI_AUTH_OPEN;
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP,&ap)); ESP_ERROR_CHECK(esp_wifi_start());radio=true;s_setup=true;
+        setup_until=esp_timer_get_time()+300*SECOND;
+        if(!server) {
+            httpd_config_t hc=HTTPD_DEFAULT_CONFIG(); ESP_ERROR_CHECK(httpd_start(&server,&hc));
+            httpd_uri_t root={};root.uri="/";root.method=HTTP_GET;root.handler=page;ESP_ERROR_CHECK(httpd_register_uri_handler(server,&root));
+            httpd_uri_t post={};post.uri="/wifi";post.method=HTTP_POST;post.handler=save;ESP_ERROR_CHECK(httpd_register_uri_handler(server,&post));
+        }
+        ESP_LOGI("clock","Cau hinh: %s -> http://192.168.4.1",s_ap);
+    };
+    if(!has_saved) setup();
+    for(;;) {
+        int64_t now=esp_timer_get_time();
+        if(s_open_setup.exchange(false)) setup();
+        bool received=xQueueReceive(s_credentials,&candidate,0)==pdTRUE;
+        if(received || (!trying&&now>=next_sync&&has_saved)) {
+            if(sntp){esp_netif_sntp_deinit();sntp=false;}
+            if(!received) candidate=saved;
+            pending=received;
+            if(radio) esp_wifi_disconnect(); else {ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));}
+            wifi_config_t sta={}; memcpy(sta.sta.ssid,candidate.ssid,strlen(candidate.ssid));memcpy(sta.sta.password,candidate.password,strlen(candidate.password));
+            ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA,&sta));
+            s_connected=false;
+            if(!radio){ESP_ERROR_CHECK(esp_wifi_start());radio=true;}
+            esp_wifi_connect(); trying=true;deadline=now+60*SECOND;reconnect=now+10*SECOND;
+        }
+        if(trying&&s_connected&&!sntp) {
+            esp_sntp_config_t ntp=ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+            ESP_ERROR_CHECK(esp_netif_sntp_init(&ntp));sntp=true;
+        }
+        bool synced=trying&&sntp&&esp_netif_sntp_sync_wait(0)==ESP_OK;
+        if(synced || (trying&&now>=deadline)) {
+            if(sntp){esp_netif_sntp_deinit();sntp=false;}
+            trying=false;
+            if(synced) {
+                if(pending) {
+                    esp_err_t err=nvs_open("clock",NVS_READWRITE,&h);
+                    if(err==ESP_OK){err=nvs_set_blob(h,"wifi",&candidate,sizeof(candidate));if(err==ESP_OK)err=nvs_commit(h);nvs_close(h);}
+                    if(err!=ESP_OK){ESP_LOGE("clock","Khong luu duoc WiFi: %s",esp_err_to_name(err));setup();vTaskDelay(pdMS_TO_TICKS(200));continue;}
+                    saved=candidate;has_saved=true;
+                }
+                next_sync=now+86400*SECOND;
+                if(server){httpd_stop(server);server=nullptr;}
+                s_setup=false;esp_wifi_stop();radio=false;s_connected=false;
+                ESP_LOGI("clock","Da dong bo; tat WiFi 24 gio");
+            } else {
+                ESP_LOGW("clock","Dong bo that bai; thu lai sau 1 gio");
+                next_sync=now+3600*SECOND;
+                if(time(nullptr)<1704067200 || pending) setup();
+                else if(!s_setup){esp_wifi_stop();radio=false;}
+            }
+        }
+        if(trying&&!s_connected&&now>=reconnect) {esp_wifi_connect();reconnect=now+10*SECOND;}
+        if(s_setup&&!trying&&has_saved&&time(nullptr)>=1704067200&&now>=setup_until) {
+            if(server){httpd_stop(server);server=nullptr;}esp_wifi_stop();radio=false;s_setup=false;
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
+void clock_start() {
+    setenv("TZ","ICT-7",1);tzset();
+    s_credentials=xQueueCreate(1,sizeof(Credentials));configASSERT(s_credentials);
+    panel_set_brightness(48);
+    configASSERT(xTaskCreate(display,"clock_display",4096,nullptr,3,nullptr)==pdPASS);
+    configASSERT(xTaskCreate(network,"clock_network",6144,nullptr,4,nullptr)==pdPASS);
+}

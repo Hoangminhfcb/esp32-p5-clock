@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HUB75 LED</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+  <h1><span></span>Bảng LED HUB75 <small id="ver"></small></h1>
+
+  <div class="card" id="link">
+    <label class="t">Ghép 2 màn hình <span class="val" id="lkSelf"></span></label>
+    <div id="lkInfo" class="status"></div>
+    <label class="t gap">Màn hình master (mạch này) đặt ở</label>
+    <div class="seg" id="lkSide"><button data-v="0">Bên trái</button><button data-v="1">Bên phải</button></div>
+    <div id="lkFound"></div>
+    <div class="act gap">
+      <button id="lkScan" class="sec">Tìm màn hình khác</button>
+      <button id="lkUnpair" class="sec hide">Hủy ghép</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <label class="t">Số hàng chữ</label>
+    <div class="seg" id="lines"><button data-v="1">1 hàng</button><button data-v="2">2 hàng</button></div>
+  </div>
+
+  <div class="tabs" id="tabs"><button data-v="0">Hàng 1</button><button data-v="1">Hàng 2</button></div>
+
+  <div class="card">
+    <label class="t" for="text">Nội dung <span class="val" id="cnt"></span></label>
+    <textarea id="text" placeholder="Nhập chữ, gõ tiếng Việt có dấu…"></textarea>
+    <div class="status" id="status"></div>
+
+    <div class="row gap">
+      <div>
+        <label class="t">Kiểu chữ</label>
+        <div class="seg" id="font"></div>
+      </div>
+      <div>
+        <label class="t">Cỡ chữ <span class="val">chiều cao chữ hoa</span></label>
+        <div class="stepper">
+          <button id="sizeDown" aria-label="Giảm cỡ">−</button>
+          <span id="size"></span>
+          <button id="sizeUp" aria-label="Tăng cỡ">+</button>
+        </div>
+      </div>
+    </div>
+
+    <label class="t gap">Căn lề (khi không chạy chữ)</label>
+    <div class="seg" id="align"><button data-v="0">Trái</button><button data-v="1">Giữa</button><button data-v="2">Phải</button></div>
+
+    <label class="t gap">Màu chữ</label>
+    <div class="seg" id="effect"><button data-v="0">Một màu</button><button data-v="1">Cầu vồng</button><button data-v="2">Đổi màu</button></div>
+    <div class="sw gap" id="sw"><input type="color" id="color"></div>
+
+    <label class="t gap">Tốc độ chạy chữ <span class="val" id="sV"></span></label>
+    <input type="range" id="speed" min="10" max="150">
+  </div>
+
+  <div class="card">
+    <label class="t">Độ sáng <span class="val" id="bV"></span></label>
+    <input type="range" id="brightness" min="5" max="255">
+    <label class="t gap">Tốc độ đổi màu (cầu vồng) <span class="val" id="fV"></span></label>
+    <input type="range" id="fx" min="1" max="10">
+  </div>
+
+  <div class="act">
+    <button id="send">Gửi lên bảng LED</button>
+    <button id="reset" title="Khôi phục mặc định">Mặc định</button>
+  </div>
+  <div id="msg"></div>
+  <div id="showNote" class="note hide">Đang trình chiếu — bấm “Gửi” sẽ dừng trình chiếu và hiện nội dung đang chỉnh.</div>
+
+  <div class="card" id="prof">
+    <label class="t">Profile đã lưu <span class="val" id="pfCount"></span></label>
+    <div class="status">Lưu nội dung đang chỉnh ở trên (chữ, kiểu, cỡ, màu, hiệu ứng, tốc độ) thành 1 profile để dùng lại hoặc trình chiếu.</div>
+    <div class="pfnew gap">
+      <input id="pfName" maxlength="24" placeholder="Tên profile, vd: Khai trương">
+      <button id="pfSave">Lưu mới</button>
+    </div>
+    <div id="pfList"></div>
+  </div>
+
+  <div class="card" id="show">
+    <label class="t">Trình chiếu <span class="val" id="shState"></span></label>
+    <div class="status" id="shInfo"></div>
+    <div class="act gap">
+      <button id="shToggle">Bắt đầu trình chiếu</button>
+    </div>
+  </div>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

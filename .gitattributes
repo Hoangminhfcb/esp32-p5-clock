@@ -1,0 +1,11 @@
+# Git tự chuyển xuống dòng (CRLF trên Windows, LF trong repo)
+* text=auto
+
+# Script Windows giữ CRLF
+*.bat text eol=crlf
+
+# File nhị phân
+*.ttf binary
+*.png binary
+*.jpg binary
+*.bin binary

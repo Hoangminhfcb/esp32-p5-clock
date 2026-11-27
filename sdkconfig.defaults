@@ -1,0 +1,16 @@
+# =====================================================================
+#  Cấu hình ESP-IDF tối thiểu của dự án (được đưa lên git).
+#  File sdkconfig KHÔNG đưa lên git — ESP-IDF tự tạo lại từ file này.
+#  Đổi cấu hình bằng menuconfig xong, chạy:  idf.py save-defconfig
+# =====================================================================
+CONFIG_IDF_TARGET="esp32s3"
+CONFIG_ESPTOOLPY_FLASHSIZE_2MB=y
+
+# WiFi + web server làm app > 1MB -> dùng bảng phân vùng "Single app large" (1.5MB)
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+
+# Thư viện HUB75 dùng không kèm Adafruit GFX
+CONFIG_ESP32_HUB75_USE_GFX=n
+
+# Web server mở tới 10 kết nối + DNS captive portal -> cần thêm socket (mặc định 10)
+CONFIG_LWIP_MAX_SOCKETS=16

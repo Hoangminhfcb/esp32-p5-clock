@@ -1,0 +1,68 @@
+/* Giao diện web bảng LED HUB75 — tối, gọn, dùng tốt trên điện thoại */
+:root{--bg:#0f1115;--card:#181b22;--line:#2a2f3a;--txt:#e8eaf0;--mut:#8b93a6;--acc:#3ddc84;--warn:#ffb020;--err:#ff6b6b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:560px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:4px 0 14px;display:flex;align-items:center;gap:8px}
+h1 span{width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc)}
+h1 small{font-size:12px;color:var(--mut);font-weight:400;margin-left:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+label.t{display:block;font-size:13px;color:var(--mut);margin:0 0 6px}
+.val{float:right;color:var(--txt)}
+textarea{width:100%;background:#0c0e12;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;resize:vertical;min-height:60px}
+.row{display:flex;gap:12px;flex-wrap:wrap}.row>div{flex:1 1 200px}
+.gap{margin-top:14px}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{flex:1;background:#0c0e12;color:var(--txt);border:0;border-right:1px solid var(--line);padding:9px 2px;font:inherit;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--acc);color:#000;font-weight:600}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.stepper button{width:48px;padding:7px 0;background:#0c0e12;color:var(--txt);border:0;font:600 20px system-ui;cursor:pointer}
+.stepper button:disabled{opacity:.3;cursor:not-allowed}
+.stepper span{flex:1;text-align:center;font-weight:600}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:#0c0e12;color:var(--mut);font:600 14px system-ui;cursor:pointer}
+.tabs button.on{border-color:var(--acc);color:var(--txt);background:#1d2a22}
+.status{font-size:13px;color:var(--mut);margin-top:6px;min-height:18px}
+.tag{padding:1px 8px;border-radius:99px;font-size:12px;background:#243;color:var(--acc)}
+.tag.sc{background:#432;color:var(--warn)}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.sw{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sw i{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.sw i.on{border-color:#fff}
+input[type=color]{width:40px;height:32px;border:0;background:none;padding:0}
+.act{display:flex;gap:10px}
+.act button{flex:1;padding:12px;border-radius:10px;border:0;font:600 15px system-ui;cursor:pointer}
+#send{background:var(--acc);color:#000}
+#reset{flex:0 0 auto;background:#2a2f3a;color:var(--txt)}
+#msg{text-align:center;font-size:13px;min-height:20px;margin-top:8px}
+.hide{display:none!important}
+/* Ghép 2 màn hình */
+.act button.sec{background:#2a2f3a;color:var(--txt)}
+#lkFound .dev{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+#lkFound .dev b{flex:1}
+#lkFound .dev small{color:var(--mut)}
+#lkFound .dev button{padding:7px 14px;border-radius:8px;border:0;background:var(--acc);color:#000;font:600 14px system-ui;cursor:pointer}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:var(--err)}
+.dot.on{background:var(--acc)}
+#lkInfo{margin-bottom:12px}
+/* Profile + trình chiếu */
+.note{font-size:13px;color:var(--warn);text-align:center;margin:-4px 0 12px}
+.pfnew{display:flex;gap:8px}
+.pfnew input{flex:1;min-width:0;background:#0c0e12;color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font:inherit}
+.pfnew button,#shToggle{padding:9px 14px;border-radius:8px;border:0;background:var(--acc);color:#000;font:600 14px system-ui;cursor:pointer}
+#shToggle.stop{background:var(--err)}
+#pfList .pf{padding:10px 0;border-bottom:1px solid var(--line)}
+#pfList .pf:last-child{border-bottom:0}
+#pfList .top{display:flex;align-items:center;gap:8px}
+#pfList .top input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc);flex:0 0 auto}
+#pfList .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+#pfList .secs{display:flex;align-items:center;gap:4px;color:var(--mut);font-size:13px}
+#pfList .secs input{width:58px;background:#0c0e12;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:5px;font:inherit;text-align:center}
+#pfList .btns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+#pfList .btns button{flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--line);background:#0c0e12;color:var(--txt);font:13px system-ui;cursor:pointer;min-width:44px}
+#pfList .btns button.go{background:var(--acc);color:#000;border-color:var(--acc);font-weight:600}
+#pfList .btns button.del{color:var(--err)}
+#pfList .btns button:disabled{opacity:.3;cursor:not-allowed}
+#pfList .pf.cur .nm::after{content:" ▶ đang chiếu";color:var(--acc);font-weight:400;font-size:12px}
+#pfList .empty{color:var(--mut);font-size:13px;padding:8px 0}
