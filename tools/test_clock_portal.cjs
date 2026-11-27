@@ -24,7 +24,9 @@ const context=vm.createContext({
  setTimeout:fn=>queueMicrotask(fn),
  fetch:async(url,options)=>{
   calls.push({url,options});
-  const body=responses.shift();assert.ok(body,'Unexpected fetch');
+  const body=url==='/palette'&&options?.method!=='POST'
+   ?{time:['#112233','#445566','#778899','#aabbcc'],date:['#f01122','#f03344','#f05566','#f07788']}
+   :responses.shift();assert.ok(body,'Unexpected fetch');
   return {ok:!body.error,json:async()=>body,text:async()=>body.message||body.error};
  }
 });
@@ -32,7 +34,7 @@ const settle=()=>new Promise(resolve=>setImmediate(resolve));
 (async()=>{
  vm.runInContext(source,context);
  await settle();
- assert.equal(calls[0].url,'/scan?refresh=1');assert.equal(calls[1].url,'/scan');
+ assert.equal(calls[0].url,'/scan?refresh=1');assert.equal(calls.filter(call=>call.url.startsWith('/scan'))[1].url,'/scan');
  assert.equal(get('networks').options.length,3);
  assert.match(get('networks').options[1].text,/Nhà <Wi-Fi>/);
  assert.match(get('networks').options[2].text,/Không mật khẩu/);
@@ -54,5 +56,12 @@ const settle=()=>new Promise(resolve=>setImmediate(resolve));
  responses=[{scanning:false,networks:[]}];
  await context.scanWifi();
  assert.match(get('status').textContent,/Không thấy mạng/);assert.equal(get('networks').disabled,true);
- console.log('Portal tests passed: automatic scan, selection, safe SSID labels, submission, hidden network, busy/error and empty results');
+ assert.equal(get('h0').value,'#112233');assert.equal(get('d3').value,'#f07788');
+ get('h0').value='#123456';responses=[{message:'Đã lưu bảng màu'}];
+ await get('palette-form').events.submit({preventDefault(){}});
+ assert.equal(calls.at(-1).url,'/palette');
+ assert.equal(JSON.parse(calls.at(-1).options.body).time[0],'#123456');
+ assert.match(get('palette-status').textContent,/Đã lưu/);
+ assert.equal(get('save-palette').disabled,false);
+ console.log('Portal tests passed: automatic scan, selection, safe SSID labels, submission, hidden network, busy/error, empty results and custom palette load/save');
 })().catch(error=>{console.error(error);process.exitCode=1});

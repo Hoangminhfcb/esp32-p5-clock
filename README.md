@@ -5,8 +5,8 @@ Nhánh `feature/p5-clock` chuyển ứng dụng sang đồng hồ Việt Nam (UT
 ![Xem trước bitmap giờ và lịch](docs/clock-preview.png)
 
 - Chỉ hai hàng: giờ/phút 24 giờ cao **19 px**, lịch bitmap cao **8 px** (nét gốc, không kéo giãn).
-- Vạch giây cao 1 pixel tại hàng 21 giữa giờ và lịch, 60 LED (chừa 2 pixel mỗi mép): thêm một LED mỗi giây, đầy ở giây 59 rồi bắt đầu lại ở giây 00. Cùng màu giờ.
-- Dấu hai chấm bật/tắt theo từng giây; màu giờ và lịch thay đổi sau mỗi giờ trong ngày. Dấu `/` luôn màu trắng để dễ phân biệt với chữ lịch.
+- Vạch giây cao 1 pixel tại hàng 21 giữa giờ và lịch, 60 LED (chừa 2 pixel mỗi mép): thêm một LED mỗi giây, đầy ở giây 59 rồi bắt đầu lại ở giây 00. Dải rainbow chạy màu theo giây.
+- Dấu hai chấm bật/tắt theo từng giây; màu giờ thay đổi mỗi giờ, màu lịch thay đổi mỗi ngày tại UTC+7. Dấu `/` luôn màu trắng để dễ phân biệt với chữ lịch.
 - Hàng lịch luân phiên mỗi **6 giây**: `T6 27/11/26` và `19/10 AL` (thêm `N` nếu tháng nhuận).
 - Khi đổi lịch, dòng mới trượt lên trong **400 ms**; giờ luôn đứng yên. Có thể chỉnh trong `main/config/app_config.h`.
 - Âm lịch tính tại máy theo UTC+7, có tháng nhuận; không phụ thuộc API lịch.
@@ -20,7 +20,7 @@ Nhánh `feature/p5-clock` chuyển ứng dụng sang đồng hồ Việt Nam (UT
 4. Sai mật khẩu / mất Internet: AP vẫn mở để nhập lại. Cấu hình đã lưu trước đó được giữ nguyên.
 5. Giữ **BOOT (GPIO0) 2 giây** để mở lại AP. Nếu đồng hồ đã có giờ và Wi-Fi đã lưu, AP tự đóng sau 5 phút không thử kết nối.
 
-Khởi động lại sẽ tự dùng Wi-Fi đã lưu để lấy giờ. Nếu đồng bộ hàng ngày thất bại, đồng hồ tiếp tục chạy bằng giờ hệ thống và thử lại sau 1 giờ. Nếu khởi động khi chưa có giờ hợp lệ, màn hình hiện `--:--` và mở AP để xử lý. Mất nguồn hoàn toàn cần lấy giờ lại qua Internet; chưa có RTC pin dự phòng.
+Khởi động lại sẽ tự dùng Wi-Fi đã lưu để lấy giờ. Nếu đồng bộ hàng ngày thất bại, đồng hồ tiếp tục chạy bằng giờ hệ thống và thử lại sau 1 giờ. Khi chưa có cấu hình Wi-Fi và chưa lấy được giờ, màn hình chỉ hiện `SETTING`; đã lưu Wi-Fi hoặc đang thử kết nối thì hiện `CONNECTING`, không hiện IP. Mất nguồn hoàn toàn cần lấy giờ lại qua Internet; chưa có RTC pin dự phòng.
 
 Không dùng deep sleep/light sleep khi hiển thị liên tục: các chế độ này dừng ngoại vi quét HUB75. Điện tiêu thụ thực tế và sai số giờ trong 24 giờ cần đo trên mạch; panel LED thường là phần tiêu thụ chính.
 
@@ -51,7 +51,7 @@ Thư viện HUB75 được khóa bằng submodule; chạy `git submodule update 
 ```sh
 g++ -std=c++17 -Wall -Wextra -Werror -I main tools/test_lunar.cpp main/app/lunar.cpp -o build/test_lunar.exe
 ./build/test_lunar.exe
-g++ -std=c++17 -Wall -Wextra -Werror -I main tools/test_clock_layout.cpp main/gfx/clock_face.cpp -o build/test_clock_layout.exe
+g++ -std=c++17 -Wall -Wextra -Werror -I main tools/test_clock_layout.cpp main/gfx/clock_face.cpp main/gfx/color.cpp -o build/test_clock_layout.exe
 ./build/test_clock_layout.exe
 ```
 
@@ -61,10 +61,16 @@ Mã ứng dụng bảng chữ/ghép màn hình cũ vẫn được giữ làm tha
 
 ## Font đồng hồ
 
-Số giờ được raster hóa từ DejaVu Sans Condensed Bold ở cỡ gốc 19 px; lịch dùng Spleen 6x12, phần nét cao 8 px. Không dùng số bảy đoạn hay kéo bitmap 3x5. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
+Số giờ rounded được thiết kế bằng đường cong, nét 3 px và đầu nét tròn trong ô 14×19; lịch dùng Spleen 6x12, phần nét cao 8 px. Không dùng số bảy đoạn hay kéo bitmap 3x5. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
 
 Sinh lại bằng `python tools/gen_clock_font.py` (cần Pillow). Giấy phép: `tools/gen_fonts/font_src/LICENSE-DejaVu.txt`, `tools/gen_fonts/font_src/LICENSE-Spleen.txt`.
 
 API cấu hình: `GET /scan?refresh=1` yêu cầu quét; `GET /scan` trả `scanning` và danh sách `{ssid,rssi,secured}`. Quét thực hiện trong tác vụ mạng; màn hình vẫn cập nhật độc lập. Chặn quét khi đang thử kết nối để tránh xung đột driver.
 
 Kiểm tra luồng chọn Wi-Fi: `node tools/test_clock_portal.cjs` (Node.js, không cần cài dependency).
+
+## Phối màu tùy chọn
+
+Giữ BOOT 2 giây, vào Wi-Fi cấu hình và mở **Phối màu đồng hồ và lịch**. Mỗi bộ có 4 màu gốc tùy chọn. Bấm **Lưu bảng màu** để lưu riêng vào NVS (không cần nhập lại mật khẩu Wi-Fi). Giờ nội suy 24 màu cho 24 giờ; lịch nội suy 28 màu và đổi theo ngày dân sự Việt Nam. Bảng màu được giữ sau khi mất điện. Dấu `/` vẫn trắng; vạch giây luôn rainbow.
+
+API bảng màu: `GET /palette` và `POST /palette` với `{"time":["#RRGGBB",...],"date":["#RRGGBB",...]}`; mỗi mảng đúng 4 màu.

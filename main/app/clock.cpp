@@ -1,5 +1,6 @@
 #include "app/clock.h"
 #include "app/lunar.h"
+#include "app/clock_palette.h"
 #include "hal/panel.h"
 #include "hal/button.h"
 #include "gfx/clock_face.h"
@@ -9,6 +10,7 @@
 #include <cstdio>
 #include <ctime>
 #include <cstdlib>
+#include <cctype>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -25,7 +27,7 @@
 
 struct Credentials { char ssid[33]; char password[65]; };
 static QueueHandle_t s_credentials;
-static std::atomic<bool> s_connected{false}, s_setup{false}, s_open_setup{false};
+static std::atomic<bool> s_connected{false}, s_setup{false}, s_open_setup{false}, s_has_credentials{false}, s_time_ready{false};
 static char s_ap[32];
 static constexpr int64_t SECOND = 1000000LL;
 extern const char clock_html_start[] asm("_binary_clock_html_start");
@@ -120,16 +122,59 @@ static esp_err_t save(httpd_req_t *r) {
     httpd_resp_set_type(r,"text/plain; charset=utf-8");
     return httpd_resp_sendstr(r,"Đang thử Wi-Fi và lấy giờ. Chỉ lưu sau khi thành công. Nếu thất bại, hãy nhập lại.");
 }
+static esp_err_t get_palette(httpd_req_t *r) {
+    ClockPalette palette;clock_palette_get(&palette);
+    cJSON *root=cJSON_CreateObject();
+    const char *names[]={"time","date"};
+    for(int group=0;group<2;++group) {
+        cJSON *array=cJSON_AddArrayToObject(root,names[group]);
+        for(int i=0;i<4;++i) {
+            char hex[8];snprintf(hex,sizeof(hex),"#%06lX",static_cast<unsigned long>(group?palette.date[i]:palette.time[i]));
+            cJSON_AddItemToArray(array,cJSON_CreateString(hex));
+        }
+    }
+    char *json=cJSON_PrintUnformatted(root);cJSON_Delete(root);
+    if(!json) return httpd_resp_send_err(r,HTTPD_500_INTERNAL_SERVER_ERROR,"Khong du bo nho");
+    httpd_resp_set_type(r,"application/json; charset=utf-8");
+    httpd_resp_set_hdr(r,"Cache-Control","no-store");
+    const esp_err_t error=httpd_resp_sendstr(r,json);cJSON_free(json);return error;
+}
+static esp_err_t save_palette(httpd_req_t *r) {
+    if(r->content_len<=0||r->content_len>512) return httpd_resp_send_err(r,HTTPD_400_BAD_REQUEST,"Bang mau khong hop le");
+    char body[513];int length=0;
+    while(length<r->content_len) {
+        const int count=httpd_req_recv(r,body+length,r->content_len-length);
+        if(count<=0) return ESP_FAIL;
+        length+=count;
+    }
+    body[length]=0;
+    cJSON *root=cJSON_Parse(body);ClockPalette palette={};bool valid=true;
+    const char *names[]={"time","date"};
+    for(int group=0;group<2;++group) {
+        cJSON *array=cJSON_GetObjectItemCaseSensitive(root,names[group]);
+        if(!cJSON_IsArray(array)||cJSON_GetArraySize(array)!=4) {valid=false;break;}
+        for(int i=0;i<4;++i) {
+            const cJSON *item=cJSON_GetArrayItem(array,i);
+            if(!cJSON_IsString(item)||strlen(item->valuestring)!=7||item->valuestring[0]!='#') {valid=false;break;}
+            for(int j=1;j<7;++j) if(!isxdigit(static_cast<unsigned char>(item->valuestring[j]))) valid=false;
+            if(!valid) break;
+            const uint32_t value=strtoul(item->valuestring+1,nullptr,16);
+            (group?palette.date[i]:palette.time[i])=value;
+        }
+    }
+    cJSON_Delete(root);
+    if(!valid) return httpd_resp_send_err(r,HTTPD_400_BAD_REQUEST,"Moi bo can 4 mau #RRGGBB");
+    if(!clock_palette_store(palette)) return httpd_resp_send_err(r,HTTPD_500_INTERNAL_SERVER_ERROR,"Khong luu duoc bang mau");
+    httpd_resp_set_type(r,"text/plain; charset=utf-8");
+    return httpd_resp_sendstr(r,"Đã lưu bảng màu. Giờ đổi theo giờ, lịch đổi theo ngày; màu được phối từ các màu bạn chọn.");
+}
 static void event(void *,esp_event_base_t base,int32_t id,void *) {
     if(base==IP_EVENT && id==IP_EVENT_STA_GOT_IP) s_connected=true;
     if(base==WIFI_EVENT && id==WIFI_EVENT_STA_DISCONNECTED) s_connected=false;
 }
-static void center(const char *str,int y,int size,Rgb color) {
-    clock_face_draw(str,y,size>=17?3:1,color);
-}
 static void display(void *) {
     button_init();
-    bool latched=false, last_setup=false;
+    bool latched=false, last_setup=false, last_connecting=false, last_ready=false;
     time_t last_second=-1;
     int64_t last_animation=-1;
     for(;;) {
@@ -138,24 +183,28 @@ static void display(void *) {
         if(!held) latched=false;
         const time_t now=time(nullptr);
         const bool setup=s_setup.load();
+        const bool connecting=s_has_credentials.load()||s_connecting.load();
+        const bool ready=s_time_ready.load();
         const int64_t uptime=esp_timer_get_time()/1000;
         const int64_t phase=uptime/CLOCK_CALENDAR_MS;
         const int elapsed=uptime%CLOCK_CALENDAR_MS;
         const bool entering=elapsed<CLOCK_CALENDAR_TRANSITION_MS;
         const int64_t animation=entering?uptime/40:-1;
-        if(now==last_second&&setup==last_setup&&animation==last_animation) {
+        if(now==last_second&&setup==last_setup&&connecting==last_connecting&&ready==last_ready&&animation==last_animation) {
             vTaskDelay(pdMS_TO_TICKS(40));
             continue;
         }
-        last_second=now;last_setup=setup;last_animation=animation;
+        last_second=now;last_setup=setup;last_connecting=connecting;last_ready=ready;last_animation=animation;
         tm t={};localtime_r(&now,&t);
         panel_clear();
-        if(t.tm_year>=124) {
+        if(t.tm_year>=124&&ready) {
             // Mỗi giờ có một sắc màu riêng; dấu hai chấm đổi trạng thái mỗi giây.
-            const Rgb time_color=hue_to_rgb(static_cast<uint8_t>(t.tm_hour*256/24));
-            const Rgb date_color=hue_to_rgb(static_cast<uint8_t>(t.tm_hour*256/24+40));
+            ClockPalette palette;clock_palette_get(&palette);
+            const Rgb time_color=clock_palette_mix(palette.time,t.tm_hour,24);
+            // Ngày dân sự tại Việt Nam; không đổi màu lúc chuyển dương/âm lịch.
+            const Rgb date_color=clock_palette_mix(palette.date,(now+7*3600)/86400,28);
             clock_face_time(t.tm_hour,t.tm_min,t.tm_sec%2==0,time_color);
-            clock_face_seconds(t.tm_sec,time_color);
+            clock_face_seconds(t.tm_sec);
             char line[32];
             if(phase%2==0) {
                 static const char *WEEKDAYS[]={"CN","T2","T3","T4","T5","T6","T7"};
@@ -169,9 +218,7 @@ static void display(void *) {
             const int offset=(10*remaining*remaining)/(CLOCK_CALENDAR_TRANSITION_MS*CLOCK_CALENDAR_TRANSITION_MS);
             clock_face_date(line,offset,date_color);
         } else {
-            center("--:--",0,17,{255,150,20});
-            center(setup?"CAI WIFI":"LAY GIO",13,6,{60,220,255});
-            center("192.168.4.1",24,6,{120,255,100});
+            clock_face_status(connecting);
         }
         panel_present();
         vTaskDelay(pdMS_TO_TICKS(40));
@@ -180,6 +227,7 @@ static void display(void *) {
 static void network(void *) {
     Credentials saved={}, candidate={}; bool has_saved=false;
     nvs_handle_t h; if(nvs_open("clock",NVS_READWRITE,&h)==ESP_OK) {size_t n=sizeof(saved); has_saved=nvs_get_blob(h,"wifi",&saved,&n)==ESP_OK&&n==sizeof(saved)&&saved.ssid[0]&&memchr(saved.ssid,0,sizeof(saved.ssid))&&memchr(saved.password,0,sizeof(saved.password)); nvs_close(h);}
+    s_has_credentials=has_saved;
     ESP_ERROR_CHECK(esp_netif_init()); ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_ap(); esp_netif_create_default_wifi_sta();
     wifi_init_config_t cfg=WIFI_INIT_CONFIG_DEFAULT(); ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -200,6 +248,8 @@ static void network(void *) {
             httpd_config_t hc=HTTPD_DEFAULT_CONFIG();hc.stack_size=6144; ESP_ERROR_CHECK(httpd_start(&server,&hc));
             httpd_uri_t root={};root.uri="/";root.method=HTTP_GET;root.handler=page;ESP_ERROR_CHECK(httpd_register_uri_handler(server,&root));
             httpd_uri_t scan={};scan.uri="/scan";scan.method=HTTP_GET;scan.handler=scan_request;ESP_ERROR_CHECK(httpd_register_uri_handler(server,&scan));
+            httpd_uri_t colors={};colors.uri="/palette";colors.method=HTTP_GET;colors.handler=get_palette;ESP_ERROR_CHECK(httpd_register_uri_handler(server,&colors));
+            colors.method=HTTP_POST;colors.handler=save_palette;ESP_ERROR_CHECK(httpd_register_uri_handler(server,&colors));
             httpd_uri_t post={};post.uri="/wifi";post.method=HTTP_POST;post.handler=save;ESP_ERROR_CHECK(httpd_register_uri_handler(server,&post));
         }
         s_scan_busy=true;s_scan_requested=true;
@@ -234,15 +284,16 @@ static void network(void *) {
                     esp_err_t err=nvs_open("clock",NVS_READWRITE,&h);
                     if(err==ESP_OK){err=nvs_set_blob(h,"wifi",&candidate,sizeof(candidate));if(err==ESP_OK)err=nvs_commit(h);nvs_close(h);}
                     if(err!=ESP_OK){ESP_LOGE("clock","Khong luu duoc WiFi: %s",esp_err_to_name(err));setup();vTaskDelay(pdMS_TO_TICKS(200));continue;}
-                    saved=candidate;has_saved=true;
+                    saved=candidate;has_saved=true;s_has_credentials=true;
                 }
-                next_sync=now+86400*SECOND;
+                next_sync=now+86400*SECOND;s_time_ready=true;
                 if(server){httpd_stop(server);server=nullptr;}
                 s_setup=false;esp_wifi_stop();radio=false;s_connected=false;
                 ESP_LOGI("clock","Da dong bo; tat WiFi 24 gio");
             } else {
                 ESP_LOGW("clock","Dong bo that bai; thu lai sau 1 gio");
                 next_sync=now+3600*SECOND;
+                if(has_saved&&time(nullptr)>=1704067200) s_time_ready=true;
                 if(time(nullptr)<1704067200 || pending) setup();
                 else if(!s_setup){esp_wifi_stop();radio=false;}
             }
@@ -260,6 +311,7 @@ static void network(void *) {
 }
 void clock_start() {
     setenv("TZ","ICT-7",1);tzset();
+    clock_palette_init();
     s_scan_mutex=xSemaphoreCreateMutex();configASSERT(s_scan_mutex);
     s_credentials=xQueueCreate(1,sizeof(Credentials));configASSERT(s_credentials);
     panel_set_brightness(48);

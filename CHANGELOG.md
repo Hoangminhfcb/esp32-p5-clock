@@ -1,3 +1,10 @@
+# 2.3.0 — Rounded, rainbow và bảng màu tùy chọn
+
+- Thiết kế lại 10 chữ số bằng đường cong, nét tròn 3 px, giữ ô 14×19.
+- Thanh giây rainbow; màu giờ theo giờ, màu lịch theo ngày tại UTC+7.
+- Hai bảng 4 màu gốc tùy chọn trên web, phối màu và lưu NVS độc lập Wi-Fi.
+- Khi chưa có giờ: chỉ hiện SETTING hoặc CONNECTING, không hiện IP.
+
 # 2.2.3 — Vạch giây giữa giờ và lịch
 
 - Thêm vạch 60 LED cao 1 pixel tại y=21: thêm một LED mỗi giây, bắt đầu lại khi sang phút.
