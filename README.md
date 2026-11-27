@@ -2,9 +2,10 @@
 
 Nhánh `feature/p5-clock` chuyển ứng dụng sang đồng hồ Việt Nam (UTC+7).
 
-- Giờ/phút 24 giờ cao 15 px, luôn hiện ở hàng trên.
-- Hàng giữa: `T2`…`T7` / `CN`, ngày/tháng dương lịch.
-- Hàng dưới đổi mỗi 5 giây: `ALdd/mm` (thêm `N` nếu tháng nhuận), rồi năm dương và năm âm (`2026 AL2026`).
+- Chỉ hai hàng: giờ/phút 24 giờ cao **20 px**, lịch cao **10 px**.
+- Dấu hai chấm bật/tắt theo từng giây; màu giờ và lịch thay đổi theo giờ trong ngày.
+- Hàng lịch luân phiên mỗi **6 giây**: `T6 27.11.2026` và `19.10 AL` (thêm `N` nếu tháng nhuận).
+- Khi đổi lịch, dòng mới trượt lên trong **400 ms**; giờ luôn đứng yên. Có thể chỉnh trong `main/config/app_config.h`.
 - Âm lịch tính tại máy theo UTC+7, có tháng nhuận; không phụ thuộc API lịch.
 - Sau đồng bộ NTP thành công, tắt Wi-Fi hoàn toàn 24 giờ. Tác vụ chờ giữa các lần cập nhật; DMA tiếp tục quét LED. Độ sáng mặc định 48/255.
 
@@ -51,6 +52,6 @@ g++ -std=c++17 -Wall -Wextra -Werror -I main tools/test_clock_layout.cpp main/gf
 ./build/test_clock_layout.exe
 ```
 
-Các mốc kiểm tra gồm Tết 2024–2027, tháng 2 nhuận 2023, chuyển năm; kiểm tra miền giá trị ngày âm 2000–2099 và giới hạn pixel cho mọi giờ/phút và ngày/tháng. Đây không phải đối chiếu toàn bộ lịch thiên văn trong 100 năm.
+Các mốc kiểm tra gồm Tết 2024–2027, tháng 2 nhuận 2023, chuyển năm; kiểm tra miền giá trị và tính liên tiếp của 36.525 ngày trong 2000–2099 và giới hạn pixel cho mọi giờ/phút và ngày/tháng. Đây không phải đối chiếu toàn bộ lịch thiên văn trong 100 năm.
 
 Mã ứng dụng bảng chữ/ghép màn hình cũ vẫn được giữ làm tham khảo nhưng không được biên dịch trong nhánh đồng hồ. Tài liệu cũ trong `docs/` mô tả ứng dụng bảng chữ.

@@ -1,3 +1,10 @@
+# 2.1.0 — Đồng hồ hai hàng, chữ lớn
+
+- Tăng giờ lên 20 px và lịch lên 10 px; chỉ hiện hai hàng.
+- Dấu hai chấm nháy theo giây; màu thay đổi theo giờ.
+- Luân phiên `T6 27.11.2026` / `19.10 AL` mỗi 6 giây, trượt lịch vào 400 ms.
+- Kiểm tra dấu hai chấm, bố cục và cắt hiệu ứng trong vùng lịch.
+
 # 2.0.0 — Đồng hồ P5
 
 - Giờ Việt Nam, thứ/ngày/tháng/năm và âm lịch có tháng nhuận.

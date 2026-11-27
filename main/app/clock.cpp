@@ -55,33 +55,52 @@ static void center(const char *str,int y,int size,Rgb color) {
     clock_face_draw(str,y,size>=17?3:1,color);
 }
 static void display(void *) {
-    button_init(); bool latched=false;
-    time_t last_frame=-1; bool last_setup=false;
+    button_init();
+    bool latched=false, last_setup=false;
+    time_t last_second=-1;
+    int64_t last_animation=-1;
     for(;;) {
-        auto held=button_held_ms(); if(held>=2000&&!latched) {s_open_setup=true;latched=true;} if(!held) latched=false;
-        time_t now=time(nullptr);
+        const auto held=button_held_ms();
+        if(held>=2000&&!latched) {s_open_setup=true;latched=true;}
+        if(!held) latched=false;
+        const time_t now=time(nullptr);
         const bool setup=s_setup.load();
-        // Nút vẫn được đọc mỗi 200 ms; chỉ vẽ lại khi nội dung đổi.
-        if(now/5==last_frame && setup==last_setup) {vTaskDelay(pdMS_TO_TICKS(200));continue;}
-        last_frame=now/5;last_setup=setup;
+        const int64_t uptime=esp_timer_get_time()/1000;
+        const int64_t phase=uptime/CLOCK_CALENDAR_MS;
+        const int elapsed=uptime%CLOCK_CALENDAR_MS;
+        const bool entering=elapsed<CLOCK_CALENDAR_TRANSITION_MS;
+        const int64_t animation=entering?uptime/40:-1;
+        if(now==last_second&&setup==last_setup&&animation==last_animation) {
+            vTaskDelay(pdMS_TO_TICKS(40));
+            continue;
+        }
+        last_second=now;last_setup=setup;last_animation=animation;
         tm t={};localtime_r(&now,&t);
-        panel_clear(); char line[40];
+        panel_clear();
         if(t.tm_year>=124) {
-            snprintf(line,sizeof(line),"%02d:%02d",t.tm_hour,t.tm_min); center(line,0,17,{255,150,20});
-            static const char *WEEKDAYS[]={"CN","T2","T3","T4","T5","T6","T7"};
-            const char *wd=WEEKDAYS[t.tm_wday];
-            snprintf(line,sizeof(line),"%s %02d/%02d",wd,t.tm_mday,t.tm_mon+1); center(line,18,6,{60,220,255});
-            auto l=lunar_date(t.tm_mday,t.tm_mon+1,t.tm_year+1900);
-            if((t.tm_sec/5)%2) snprintf(line,sizeof(line),"%d AL%d",t.tm_year+1900,l.year);
-            else snprintf(line,sizeof(line),"AL%02d/%02d%s",l.day,l.month,l.leap?"N":"");
-            center(line,26,6,{120,255,100});
-            if(s_setup) panel_set_pixel(63,0,0,0,255);
+            // Mỗi giờ có một sắc màu riêng; dấu hai chấm đổi trạng thái mỗi giây.
+            const Rgb time_color=hue_to_rgb(static_cast<uint8_t>(t.tm_hour*256/24));
+            const Rgb date_color=hue_to_rgb(static_cast<uint8_t>(t.tm_hour*256/24+40));
+            clock_face_time(t.tm_hour,t.tm_min,t.tm_sec%2==0,time_color);
+            char line[32];
+            if(phase%2==0) {
+                static const char *WEEKDAYS[]={"CN","T2","T3","T4","T5","T6","T7"};
+                snprintf(line,sizeof(line),"%s %02d.%02d.%04d",WEEKDAYS[t.tm_wday],t.tm_mday,t.tm_mon+1,t.tm_year+1900);
+            } else {
+                const auto l=lunar_date(t.tm_mday,t.tm_mon+1,t.tm_year+1900);
+                snprintf(line,sizeof(line),"%02d.%02d AL%s",l.day,l.month,l.leap?"N":"");
+            }
+            // Trượt lịch mới lên từ dưới; chỉ cắt trong vùng lịch, giờ luôn đứng yên.
+            const int remaining=entering?CLOCK_CALENDAR_TRANSITION_MS-elapsed:0;
+            const int offset=(10*remaining*remaining)/(CLOCK_CALENDAR_TRANSITION_MS*CLOCK_CALENDAR_TRANSITION_MS);
+            clock_face_date(line,offset,date_color);
         } else {
             center("--:--",0,17,{255,150,20});
-            center(s_setup?"CAI WIFI":"LAY GIO",18,6,{60,220,255});
+            center(setup?"CAI WIFI":"LAY GIO",18,6,{60,220,255});
             center("192.168.4.1",26,6,{120,255,100});
         }
-        panel_present(); vTaskDelay(pdMS_TO_TICKS(200));
+        panel_present();
+        vTaskDelay(pdMS_TO_TICKS(40));
     }
 }
 static void network(void *) {

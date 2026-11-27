@@ -100,3 +100,7 @@
 #define BOOT_MESSAGE        "hi there"   // lời chào lúc khởi động
 #define BOOT_MESSAGE_MS     3000
 #define SHOW_SSID_MS        5000        // sau lời chào: hiện tên WiFi của mạch (0 = tắt)
+
+// Đồng hồ: đổi lịch mỗi 6 giây, trượt vào trong 400 ms.
+#define CLOCK_CALENDAR_MS 6000
+#define CLOCK_CALENDAR_TRANSITION_MS 400
