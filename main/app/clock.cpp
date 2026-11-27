@@ -205,7 +205,7 @@ static void display(void *) {
             const Rgb time_color=clock_palette_mix(palette.time,t.tm_hour,24);
             // Ngày dân sự tại Việt Nam; không đổi màu lúc chuyển dương/âm lịch.
             const Rgb date_color=clock_palette_mix(palette.date,(now+7*3600)/86400,28);
-            clock_face_time(t.tm_hour,t.tm_min,t.tm_sec%2==0,time_color);
+            clock_face_time(t.tm_hour,t.tm_min,wall.tv_usec/1000,time_color);
             char line[32];
             if(phase%2==0) {
                 static const char *WEEKDAYS[]={"CN","T2","T3","T4","T5","T6","T7"};

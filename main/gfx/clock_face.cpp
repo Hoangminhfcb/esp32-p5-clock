@@ -32,17 +32,24 @@ void clock_face_draw(const char *text,int y,int,Rgb color) {
     int x=(PANEL_W-clock_face_width(text,1))/2;
     for(;*text;++text) {small_glyph(*text,x,y,color,0);x+=advance(*text);}
 }
-void clock_face_time(int hour,int minute,bool colon,Rgb color) {
+void clock_face_time(int hour,int minute,uint32_t second_ms,Rgb color) {
     const int digits[]={hour/10,hour%10,minute/10,minute%10};
-    const int xs[]={4,18,35,49};
+    const int xs[]={3,17,34,48};
     // Bitmap DSEG7 Classic Bold giữ nguyên dáng đoạn và vị trí số 1 của font gốc.
-    for(int i=0;i<4;++i) for(int row=0;row<19;++row) for(int col=0;col<12;++col) {
-        if(CLOCK_DIGITS[digits[i]][row]&(1<<(11-col)))
+    for(int i=0;i<4;++i) for(int row=0;row<19;++row) for(int col=0;col<13;++col) {
+        if(CLOCK_DIGITS[digits[i]][row]&(1<<(12-col)))
             panel_set_pixel(xs[i]+col,row+2,color.r,color.g,color.b);
     }
-    if(colon) for(int row=0;row<2;++row) for(int col=0;col<2;++col) {
-        panel_set_pixel(31+col,7+row,color.r,color.g,color.b);
-        panel_set_pixel(31+col,15+row,color.r,color.g,color.b);
+    // Hai chấm đi vào nhau, chạm ở nửa giây rồi nảy ra; nội suy để không giật pixel.
+    const int ms=second_ms%1000;
+    const int progress=(ms<=500?ms:1000-ms)*256/500;
+    const int eased=progress*progress*(768-2*progress)/65536;
+    const int positions[]={7*256+3*eased,15*256-3*eased};
+    for(int position:positions) {
+        const int top=position/256,fraction=position%256;
+        const int weights[]={256-fraction,256,fraction};
+        for(int row=0;row<3;++row) if(weights[row]) for(int col=0;col<2;++col)
+            panel_set_pixel(31+col,top+row,color.r*weights[row]/256,color.g*weights[row]/256,color.b*weights[row]/256);
     }
 }
 int clock_face_date_width(const char *text) {return clock_face_width(text,1);}
@@ -51,7 +58,7 @@ void clock_face_date(const char *text,int offset_y,Rgb color) {
     for(;*text;++text) {
         // Trắng giữ dấu / nổi bật với mọi màu lịch bão hòa theo giờ.
         const Rgb ink=*text=='/'?Rgb{255,255,255}:color;
-        small_glyph(*text,x,22+offset_y,ink,22,PANEL_H-2);
+        small_glyph(*text,x,23+offset_y,ink,23,PANEL_H-1);
         x+=advance(*text);
     }
 }

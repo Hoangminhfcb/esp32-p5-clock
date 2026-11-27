@@ -20,13 +20,19 @@ int main() {
     for(int h=0;h<24;++h) for(int m=0;m<60;++m) {
         clip_top=0;
         memset(pixels,0,sizeof(pixels));
-        clock_face_time(h,m,true,{255,255,255});
+        clock_face_time(h,m,0,{255,255,255});
         assert(pixels[7][31]&&pixels[15][31]);
         memset(pixels,0,sizeof(pixels));
-        clock_face_time(h,m,false,{255,255,255});
-        assert(!pixels[7][31]&&!pixels[15][31]);
+        clock_face_time(h,m,500,{255,255,255});
+        assert(!pixels[7][31]&&!pixels[15][31]&&pixels[10][31]&&pixels[12][31]);
         for(int y=0;y<32;++y)for(int x=0;x<64;++x)if(pixels[y][x])assert(x>0&&x<63&&y>0&&y<21);
     }
+    memset(colors,0,sizeof(colors));
+    clock_face_time(8,3,250,{255,255,255});
+    assert(colors[8][31]>0&&colors[8][31]<0xFFFFFF&&colors[9][31]==0xFFFFFF);
+    uint32_t half[32][64];memcpy(half,colors,sizeof(half));
+    memset(colors,0,sizeof(colors));clock_face_time(8,3,750,{255,255,255});
+    assert(memcmp(half,colors,sizeof(half))==0);
     // Đuôi rainbow chạy liên tục quanh mép; không tích lũy sáng cả viền.
     std::set<int> visited;
     uint32_t initial[32][64]={};
@@ -69,7 +75,7 @@ int main() {
         }
         assert(unique.size()==static_cast<size_t>(cycle));
     }
-    clip_top=22;
+    clip_top=23;
     char text[32];
     for(const char *wd:{"CN","T2","T3","T4","T5","T6","T7"})
       for(int d=1;d<=31;++d)for(int m=1;m<=12;++m) {
@@ -81,9 +87,13 @@ int main() {
         assert(clock_face_date_width(lunar)<=64);
         for(int offset=-10;offset<=10;++offset) clock_face_date(lunar,offset,{255,255,255});
     }
+    memset(pixels,0,sizeof(pixels));
     white_pixels=colored_pixels=0;
     clock_face_date("T6 27/11/26",0,{80,180,255});
     assert(white_pixels==16&&colored_pixels>0);
+    bool bottom=false;
+    for(int y=0;y<32;++y)for(int x=0;x<64;++x)if(pixels[y][x]){assert(y>=23&&y<=30&&x>0&&x<63);if(y==30)bottom=true;}
+    assert(bottom);
     white_pixels=colored_pixels=0;
     clock_face_date("19/10 AL",0,{255,80,120});
     assert(white_pixels==8&&colored_pixels>0);

@@ -4,9 +4,11 @@ Nhánh `feature/p5-clock` chuyển ứng dụng sang đồng hồ Việt Nam (UT
 
 ![Xem trước bitmap giờ và lịch](docs/clock-preview.png)
 
+[Chuyển động hai chấm theo giây](docs/clock-colon-bounce.gif)
+
 - Chỉ hai hàng: giờ/phút 24 giờ kiểu **LED 7 đoạn**, cao **19 px**, lịch bitmap cao **8 px** (nét gốc, không kéo giãn).
 - Một đoạn rainbow có đuôi mờ chạy liên tục quanh **toàn bộ mép màn hình 64×32**: bắt đầu giữa cạnh trên, chiều kim đồng hồ, một vòng/phút. Nội suy độ sáng ở 25 fps để di chuyển mượt, không tích lũy sáng cả viền.
-- Dấu hai chấm bật/tắt theo từng giây; màu giờ thay đổi mỗi giờ, màu lịch thay đổi mỗi ngày tại UTC+7. Dấu `/` luôn màu trắng để dễ phân biệt với chữ lịch.
+- Hai chấm của dấu `:` chuyển động vào nhau rồi nảy ra mỗi giây; màu giờ thay đổi mỗi giờ, màu lịch thay đổi mỗi ngày tại UTC+7. Dấu `/` luôn màu trắng để dễ phân biệt với chữ lịch.
 - Hàng lịch luân phiên mỗi **6 giây**: `T6 27/11/26` và `19/10 AL` (thêm `N` nếu tháng nhuận).
 - Khi đổi lịch, dòng mới trượt lên trong **400 ms**; giờ luôn đứng yên. Có thể chỉnh trong `main/config/app_config.h`.
 - Âm lịch tính tại máy theo UTC+7, có tháng nhuận; không phụ thuộc API lịch.
@@ -61,7 +63,7 @@ Mã ứng dụng bảng chữ/ghép màn hình cũ vẫn được giữ làm tha
 
 ## Font đồng hồ
 
-Giờ dùng font có sẵn [DSEG7 Classic Bold](https://www.keshikan.net/fonts-e.html), bitmap 12×19, giữ nguyên dáng đoạn vát của font gốc gần với ảnh tham khảo. Lịch dùng Spleen 6x12, phần nét cao 8 px và nằm ở hàng 22–29 để chừa mép dưới cho viền. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
+Giờ dùng font có sẵn [DSEG7 Classic Bold](https://www.keshikan.net/fonts-e.html), bitmap 13×19, tăng nét ngang thêm 1 pixel, giữ nguyên dáng đoạn vát của font gốc gần với ảnh tham khảo. Lịch dùng Spleen 6x12, phần nét cao 8 px và nằm ở hàng 23–30 sát viền dưới ở hàng 31. Bitmap đã sinh được commit nên build ESP-IDF không cần Pillow.
 
 Sinh lại bằng `python tools/gen_clock_font.py` (cần Pillow). Giấy phép giờ: `tools/gen_fonts/font_src/LICENSE-DSEG.txt`; chữ lịch: `tools/gen_fonts/font_src/LICENSE-Spleen.txt`.
 

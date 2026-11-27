@@ -21,7 +21,8 @@ for im in images:
     box=im.getbbox()
     assert box[2]-left<=12 and box[3]-top<=19
     cell=im.crop((left,top,left+12,top+19))
-    large.append([sum(1<<(11-x) for x in range(12) if cell.getpixel((x,y))) for y in range(19)])
+    rows=[sum(1<<(12-x) for x in range(12) if cell.getpixel((x,y))) for y in range(19)]
+    large.append([row|(row>>1) for row in rows]) # Thêm nét ngang đúng 1 pixel, ô 13 px.
 # Chữ lịch pixel gốc 5x8, từ BDF Spleen 6x12 (BSD-2-Clause).
 bdf = (SRC / 'spleen-6x12.bdf').read_text()
 chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ:/.- '
@@ -43,4 +44,4 @@ for rows in small:
     out.append('    {'+', '.join(hex(v) for v in rows)+'},')
 out += ['};', '']
 (ROOT / 'main/gfx/clock_font.h').write_text('\n'.join(out),encoding='utf-8')
-print('Generated official DSEG7 Classic Bold 12x19 digits and Spleen calendar glyphs')
+print('Generated official DSEG7 Classic Bold 13x19 digits, one-pixel heavier and Spleen calendar glyphs')

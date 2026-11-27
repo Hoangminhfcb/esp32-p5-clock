@@ -1,3 +1,10 @@
+# 2.6.0 — Nét đậm, lịch sát mép và hai chấm nảy
+
+- Tăng nét số DSEG7 thêm một pixel ngang.
+- Lịch đặt sát mép dưới ở hàng 23–30, viền giây ở hàng 31.
+- Hai chấm của dấu : chuyển động vào nhau và nảy ra theo chu kỳ 1 giây, nội suy 25 fps.
+- Giữ chuyển động viền rainbow quanh toàn bộ giờ và lịch.
+
 # 2.5.1 — Kiểu số LED theo ảnh tham khảo
 
 - Dùng font DSEG7 Classic Bold chính thức, cao 19 px, giữ các đoạn vát và khoảng hở của font gốc.
